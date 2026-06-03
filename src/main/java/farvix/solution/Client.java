@@ -224,16 +224,37 @@ public class Client implements ModInitializer, QuickImports {
     @EventHandler
     public void onMessage(EventMessage e) {
         String msg = e.getMessage().trim();
+        String msgLower = msg.toLowerCase();
+
+        // .help
+        if (msgLower.equals(".help")) {
+            e.setCancelled(true);
+            sendHelpMessage();
+            return;
+        }
+
+        // .friend
+        if (msgLower.equals(".friend")) {
+            e.setCancelled(true);
+            net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+            if (mc2.player != null) {
+                mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7- Использование .friend:"), false);
+                mc2.player.sendMessage(Text.literal("§e.friend list §7- Показать список друзей"), false);
+                mc2.player.sendMessage(Text.literal("§e.friend add <ник> §7- Добавить игрока в друзья"), false);
+                mc2.player.sendMessage(Text.literal("§e.friend remove <ник> §7- Удалить игрока из друзей"), false);
+            }
+            return;
+        }
 
         // .friend list
-        if (msg.equalsIgnoreCase(".friend list")) {
+        if (msgLower.equals(".friend list")) {
             e.setCancelled(true);
             sendFriendList(null);
             return;
         }
 
         // .friend add <ник>
-        if (msg.toLowerCase().startsWith(".friend add ")) {
+        if (msgLower.startsWith(".friend add ")) {
             e.setCancelled(true);
             String name = msg.substring(".friend add ".length()).trim();
             if (!name.isEmpty()) addFriendCmd(null, name);
@@ -241,10 +262,107 @@ public class Client implements ModInitializer, QuickImports {
         }
 
         // .friend remove <ник>
-        if (msg.toLowerCase().startsWith(".friend remove ")) {
+        if (msgLower.startsWith(".friend remove ")) {
             e.setCancelled(true);
             String name = msg.substring(".friend remove ".length()).trim();
             if (!name.isEmpty()) removeFriendCmd(null, name);
+            return;
         }
+
+        // .cfg
+        if (msgLower.equals(".cfg")) {
+            e.setCancelled(true);
+            net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+            if (mc2.player != null) {
+                mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7- Использование .cfg:"), false);
+                mc2.player.sendMessage(Text.literal("§e.cfg load <название> §7- Загрузить конфигурацию"), false);
+                mc2.player.sendMessage(Text.literal("§e.cfg save <название> §7- Сохранить конфигурацию"), false);
+                mc2.player.sendMessage(Text.literal("§e.cfg dir §7- Открыть папку с конфигурациями"), false);
+            }
+            return;
+        }
+
+        // .cfg load <название>
+        if (msgLower.startsWith(".cfg load ")) {
+            e.setCancelled(true);
+            String name = msg.substring(".cfg load ".length()).trim();
+            if (!name.isEmpty()) {
+                try {
+                    Client.getInstance().configManager.loadConfig(name);
+                    net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+                    if (mc2.player != null) {
+                        mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7| Конфиг §a" + name + " §7успешно загружен."), false);
+                    }
+                } catch (Exception ex) {
+                    net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+                    if (mc2.player != null) {
+                        mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7| §cОшибка при загрузке конфига: " + ex.getMessage()), false);
+                    }
+                }
+            }
+            return;
+        }
+
+        // .cfg save <название>
+        if (msgLower.startsWith(".cfg save ")) {
+            e.setCancelled(true);
+            String name = msg.substring(".cfg save ".length()).trim();
+            if (!name.isEmpty()) {
+                try {
+                    Client.getInstance().configManager.saveConfig(name);
+                    net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+                    if (mc2.player != null) {
+                        mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7| Конфиг §a" + name + " §7успешно сохранен."), false);
+                    }
+                } catch (Exception ex) {
+                    net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+                    if (mc2.player != null) {
+                        mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7| §cОшибка при сохранении конфига: " + ex.getMessage()), false);
+                    }
+                }
+            }
+            return;
+        }
+
+        // .cfg dir
+        if (msgLower.equals(".cfg dir")) {
+            e.setCancelled(true);
+            net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+            if (mc2.player != null) {
+                mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7| Открываем папку с конфигурациями..."), false);
+            }
+            java.io.File configDir = Client.getInstance().configManager.getConfigDir();
+            if (!configDir.exists()) {
+                configDir.mkdirs();
+            }
+            new Thread(() -> {
+                try {
+                    String os = System.getProperty("os.name").toLowerCase();
+                    if (os.contains("win")) {
+                        Runtime.getRuntime().exec("explorer.exe \"" + configDir.getAbsolutePath() + "\"");
+                    } else if (java.awt.Desktop.isDesktopSupported()) {
+                        java.awt.Desktop.getDesktop().open(configDir);
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }).start();
+        }
+    }
+
+    private static void sendHelpMessage() {
+        net.minecraft.client.MinecraftClient mc2 = net.minecraft.client.MinecraftClient.getInstance();
+        if (mc2.player == null) return;
+        mc2.player.sendMessage(Text.literal("§f§lSolution Visual §7- Список команд:"), false);
+        mc2.player.sendMessage(Text.literal("§e.help §7- Показать список команд"), false);
+        mc2.player.sendMessage(Text.literal("§e.friend list §7- Показать список друзей"), false);
+        mc2.player.sendMessage(Text.literal("§e.friend add <ник> §7- Добавить игрока в друзья"), false);
+        mc2.player.sendMessage(Text.literal("§e.friend remove <ник> §7- Удалить игрока из друзей"), false);
+        mc2.player.sendMessage(Text.literal("§e.cfg load <название> §7- Загрузить конфигурацию"), false);
+        mc2.player.sendMessage(Text.literal("§e.cfg save <название> §7- Сохранить конфигурацию"), false);
+        mc2.player.sendMessage(Text.literal("§e.cfg dir §7- Открыть папку с конфигурациями"), false);
+        mc2.player.sendMessage(Text.literal("§e.note add <текст> §7- Добавить заметку"), false);
+        mc2.player.sendMessage(Text.literal("§e.note del <номер> §7- Удалить заметку"), false);
+        mc2.player.sendMessage(Text.literal("§e.note help §7- Справка по заметкам"), false);
     }
 }

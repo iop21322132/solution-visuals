@@ -31,6 +31,10 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
+echo Сброс кэша CDN jsDelivr для мгновенного обновления HWID...
+powershell -Command "Invoke-WebRequest -Uri 'https://purge.jsdelivr.net/gh/iop21322132/solution-visuals@main/hwid.txt' -UseBasicParsing | Out-Null"
+
+echo.
 echo ==============================================
 echo    СПИСОК HWID УСПЕШНО ОБНОВЛЕН НА GITHUB!
 echo    Изменения вступят в силу мгновенно у всех игроков.
