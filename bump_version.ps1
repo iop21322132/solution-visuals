@@ -27,7 +27,7 @@ $nextVersion = $parts -join '.'
 $newVersion = $nextVersion
 try {
     # Check if host can read line (in non-interactive/piped environments, this might return empty or throw)
-    $inputVersion = Read-Host "Введите новую версию (по умолчанию $nextVersion)"
+    $inputVersion = Read-Host "Enter new version (default: $nextVersion)"
     if ($inputVersion -ne $null -and $inputVersion.Trim() -ne "") {
         $newVersion = $inputVersion.Trim()
     }
@@ -35,7 +35,7 @@ try {
     # Non-interactive fallback
 }
 
-Write-Host "Выбрана версия: $newVersion"
+Write-Host "Selected version: $newVersion"
 
 # 4. Update files
 # gradle.properties
