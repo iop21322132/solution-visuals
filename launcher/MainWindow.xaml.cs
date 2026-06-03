@@ -1166,7 +1166,7 @@ namespace SolutionLauncher
             {
                 using (var client = new HttpClient())
                 {
-                    client.Timeout = TimeSpan.FromSeconds(5);
+                    client.Timeout = TimeSpan.FromSeconds(10);
                     string remoteData = client.GetStringAsync(remoteUrl).GetAwaiter().GetResult();
                     foreach (var line in remoteData.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
                     {
@@ -1206,7 +1206,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "1.0.0";
+                string currentVersion = "3.6.3";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
@@ -1214,7 +1214,7 @@ namespace SolutionLauncher
                 {
                     using (var client = new HttpClient())
                     {
-                        client.Timeout = TimeSpan.FromSeconds(5);
+                        client.Timeout = TimeSpan.FromSeconds(10);
                         string latestVersion = client.GetStringAsync(remoteVersionUrl).GetAwaiter().GetResult().Trim();
                         if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
                         {
