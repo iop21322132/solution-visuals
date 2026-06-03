@@ -96,34 +96,88 @@ namespace SolutionLauncher
             return resolved;
         }
 
+        private string GetJsDelivrUrl(string rawUrl)
+        {
+            if (string.IsNullOrEmpty(rawUrl) || !rawUrl.StartsWith("https://raw.githubusercontent.com/"))
+            {
+                return rawUrl;
+            }
+
+            string cleanUrl = rawUrl;
+            int qIdx = cleanUrl.IndexOf('?');
+            if (qIdx >= 0)
+            {
+                cleanUrl = cleanUrl.Substring(0, qIdx);
+            }
+
+            if (cleanUrl.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                return cleanUrl.Replace("https://raw.githubusercontent.com/", "https://raw.gitmirror.com/");
+            }
+
+            string path = cleanUrl.Substring("https://raw.githubusercontent.com/".Length);
+            var parts = path.Split(new[] { '/' }, 4);
+            if (parts.Length >= 4)
+            {
+                string user = parts[0];
+                string repo = parts[1];
+                string branch = parts[2];
+                string file = parts[3];
+                // Append cache buster to guarantee bypass of CDN and local caching
+                return $"https://cdn.jsdelivr.net/gh/{user}/{repo}@{branch}/{file}?t={DateTime.UtcNow.Ticks}";
+            }
+            return rawUrl;
+        }
+
         private string SafeGetStringAsync(string url)
         {
-            try
+            if (url.StartsWith("https://raw.githubusercontent.com/"))
             {
-                if (url.StartsWith("https://raw.githubusercontent.com/"))
+                // 1. Try GitHub API first
+                try
                 {
-                    try
+                    string apiUrl = GetGitHubApiUrl(url);
+                    var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+                    request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
                     {
-                        string apiUrl = GetGitHubApiUrl(url);
-                        var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-                        request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
-                        using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                        if (response.IsSuccessStatusCode)
                         {
-                            if (response.IsSuccessStatusCode)
-                            {
-                                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                            }
+                            return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                         }
                     }
-                    catch {}
                 }
-            }
-            catch {}
+                catch {}
 
+                // 2. Try jsDelivr CDN second
+                try
+                {
+                    string jsdelivrUrl = GetJsDelivrUrl(url);
+                    var request = new HttpRequestMessage(HttpMethod.Get, jsdelivrUrl);
+                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                    {
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                        }
+                    }
+                }
+                catch {}
+            }
+
+            // 3. Fallback to ResolveUrl (which handles gitmirror or Mojang mirrors)
             string resolved = ResolveUrl(url);
             try
             {
-                return httpClient.GetStringAsync(resolved).GetAwaiter().GetResult();
+                var request = new HttpRequestMessage(HttpMethod.Get, resolved);
+                request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    response.EnsureSuccessStatusCode();
+                    return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                }
             }
             catch (Exception ex)
             {
@@ -144,7 +198,13 @@ namespace SolutionLauncher
                 if (activatedMirror)
                 {
                     string retriedUrl = ResolveUrl(url);
-                    return httpClient.GetStringAsync(retriedUrl).GetAwaiter().GetResult();
+                    var request = new HttpRequestMessage(HttpMethod.Get, retriedUrl);
+                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                    {
+                        response.EnsureSuccessStatusCode();
+                        return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    }
                 }
                 throw;
             }
@@ -152,32 +212,52 @@ namespace SolutionLauncher
 
         private byte[] SafeGetByteArrayAsync(string url)
         {
-            try
+            if (url.StartsWith("https://raw.githubusercontent.com/"))
             {
-                if (url.StartsWith("https://raw.githubusercontent.com/"))
+                // 1. Try GitHub API first
+                try
                 {
-                    try
+                    string apiUrl = GetGitHubApiUrl(url);
+                    var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+                    request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
                     {
-                        string apiUrl = GetGitHubApiUrl(url);
-                        var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-                        request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
-                        using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                        if (response.IsSuccessStatusCode)
                         {
-                            if (response.IsSuccessStatusCode)
-                            {
-                                return response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
-                            }
+                            return response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
                         }
                     }
-                    catch {}
                 }
+                catch {}
+
+                // 2. Try jsDelivr CDN second
+                try
+                {
+                    string jsdelivrUrl = GetJsDelivrUrl(url);
+                    var request = new HttpRequestMessage(HttpMethod.Get, jsdelivrUrl);
+                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                    {
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                        }
+                    }
+                }
+                catch {}
             }
-            catch {}
 
             string resolved = ResolveUrl(url);
             try
             {
-                return httpClient.GetByteArrayAsync(resolved).GetAwaiter().GetResult();
+                var request = new HttpRequestMessage(HttpMethod.Get, resolved);
+                request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    response.EnsureSuccessStatusCode();
+                    return response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                }
             }
             catch (Exception ex)
             {
@@ -198,7 +278,13 @@ namespace SolutionLauncher
                 if (activatedMirror)
                 {
                     string retriedUrl = ResolveUrl(url);
-                    return httpClient.GetByteArrayAsync(retriedUrl).GetAwaiter().GetResult();
+                    var request = new HttpRequestMessage(HttpMethod.Get, retriedUrl);
+                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                    {
+                        response.EnsureSuccessStatusCode();
+                        return response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                    }
                 }
                 throw;
             }
@@ -318,7 +404,7 @@ namespace SolutionLauncher
             string nickname = NicknameInput.Text.Trim();
             if (string.IsNullOrEmpty(nickname))
             {
-                MessageBox.Show("РџРѕР¶Р°Р»СѓР№СЃС‚Р°, РІРІРµРґРёС‚Рµ РЅРёРєРЅРµР№Рј РїРµСЂРµРґ РЅР°С‡Р°Р»РѕРј РёРіСЂС‹.", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Р СџР С•Р В¶Р В°Р В»РЎС“Р в„–РЎРѓРЎвЂљР В°, Р Р†Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р Р…Р С‘Р С”Р Р…Р ВµР в„–Р С Р С—Р ВµРЎР‚Р ВµР Т‘ Р Р…Р В°РЎвЂЎР В°Р В»Р С•Р С Р С‘Р С–РЎР‚РЎвЂ№.", "Р С›РЎв‚¬Р С‘Р В±Р С”Р В°", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -341,8 +427,8 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РџСЂРѕРёР·РѕС€РµР» СЃР±РѕР№ РїСЂРё Р·Р°РїСѓСЃРєРµ: {ex.Message}");
-                SetStatus("РћС€РёР±РєР° Р·Р°РїСѓСЃРєР°", 0);
+                Log($"[Р С›Р РЃР ВР вЂР С™Р С’] Р СџРЎР‚Р С•Р С‘Р В·Р С•РЎв‚¬Р ВµР В» РЎРѓР В±Р С•Р в„– Р С—РЎР‚Р С‘ Р В·Р В°Р С—РЎС“РЎРѓР С”Р Вµ: {ex.Message}");
+                SetStatus("Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р В·Р В°Р С—РЎС“РЎРѓР С”Р В°", 0);
             }
             finally
             {
@@ -375,18 +461,18 @@ namespace SolutionLauncher
 
         private void StartLaunchPipeline(string nickname, int ramGb)
         {
-            Log("РќР°С‡Р°Р»Рѕ РїСЂРѕС†РµСЃСЃР° РїРѕРґРіРѕС‚РѕРІРєРё РёРіСЂС‹...");
+            Log("Р СњР В°РЎвЂЎР В°Р В»Р С• Р С—РЎР‚Р С•РЎвЂ Р ВµРЎРѓРЎРѓР В° Р С—Р С•Р Т‘Р С–Р С•РЎвЂљР С•Р Р†Р С”Р С‘ Р С‘Р С–РЎР‚РЎвЂ№...");
 
             string gameDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".solutionvisuals");
             string targetModJar = Path.Combine(gameDir, "mods", "SolutionVisual.jar");
             if (IsFileLocked(targetModJar))
             {
-                Log("[РћРЁРР‘РљРђ] РћР±РЅР°СЂСѓР¶РµРЅР° Р·Р°РїСѓС‰РµРЅРЅР°СЏ РєРѕРїРёСЏ РёРіСЂС‹ (С„Р°Р№Р» SolutionVisual.jar Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ).");
+                Log("[Р С›Р РЃР ВР вЂР С™Р С’] Р С›Р В±Р Р…Р В°РЎР‚РЎС“Р В¶Р ВµР Р…Р В° Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р…Р Р…Р В°РЎРЏ Р С”Р С•Р С—Р С‘РЎРЏ Р С‘Р С–РЎР‚РЎвЂ№ (РЎвЂћР В°Р в„–Р В» SolutionVisual.jar Р В·Р В°Р В±Р В»Р С•Р С”Р С‘РЎР‚Р С•Р Р†Р В°Р Р…).");
                 Dispatcher.Invoke(() =>
                 {
                     MessageBox.Show(
-                        "РРіСЂР° СѓР¶Рµ Р·Р°РїСѓС‰РµРЅР° РёР»Рё РµС‘ РїСЂРѕС†РµСЃСЃ Р·Р°РІРёСЃ РІ С„РѕРЅРѕРІРѕРј СЂРµР¶РёРјРµ.\n\nРџРѕР¶Р°Р»СѓР№СЃС‚Р°, Р·Р°РєСЂРѕР№С‚Рµ Р·Р°РїСѓС‰РµРЅРЅСѓСЋ РєРѕРїРёСЋ Minecraft РїРµСЂРµРґ РїРѕРІС‚РѕСЂРЅС‹Рј Р·Р°РїСѓСЃРєРѕРј.",
-                        "РРіСЂР° СѓР¶Рµ Р·Р°РїСѓС‰РµРЅР°",
+                        "Р ВР С–РЎР‚Р В° РЎС“Р В¶Р Вµ Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р…Р В° Р С‘Р В»Р С‘ Р ВµРЎвЂ Р С—РЎР‚Р С•РЎвЂ Р ВµРЎРѓРЎРѓ Р В·Р В°Р Р†Р С‘РЎРѓ Р Р† РЎвЂћР С•Р Р…Р С•Р Р†Р С•Р С РЎР‚Р ВµР В¶Р С‘Р СР Вµ.\n\nР СџР С•Р В¶Р В°Р В»РЎС“Р в„–РЎРѓРЎвЂљР В°, Р В·Р В°Р С”РЎР‚Р С•Р в„–РЎвЂљР Вµ Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р…Р Р…РЎС“РЎР‹ Р С”Р С•Р С—Р С‘РЎР‹ Minecraft Р С—Р ВµРЎР‚Р ВµР Т‘ Р С—Р С•Р Р†РЎвЂљР С•РЎР‚Р Р…РЎвЂ№Р С Р В·Р В°Р С—РЎС“РЎРѓР С”Р С•Р С.",
+                        "Р ВР С–РЎР‚Р В° РЎС“Р В¶Р Вµ Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р…Р В°",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning
                     );
@@ -400,21 +486,21 @@ namespace SolutionLauncher
 
             if (isDevMode)
             {
-                Log($"[Р Р•Р–РРњ Р РђР—Р РђР‘РћРўР§РРљРђ] РљРѕСЂРЅРµРІР°СЏ РїР°РїРєР° РїСЂРѕРµРєС‚Р°: {rootDir}");
-                SetStatus("РЎР±РѕСЂРєР° РЅР°С€РµРіРѕ РјРѕРґР°...", 5);
+                Log($"[Р В Р вЂўР вЂ“Р ВР Сљ Р В Р С’Р вЂ”Р В Р С’Р вЂР С›Р СћР В§Р ВР С™Р С’] Р С™Р С•РЎР‚Р Р…Р ВµР Р†Р В°РЎРЏ Р С—Р В°Р С—Р С”Р В° Р С—РЎР‚Р С•Р ВµР С”РЎвЂљР В°: {rootDir}");
+                SetStatus("Р РЋР В±Р С•РЎР‚Р С”Р В° Р Р…Р В°РЎв‚¬Р ВµР С–Р С• Р СР С•Р Т‘Р В°...", 5);
                 // 1. Build the mod using gradlew remapJar
                 if (!BuildMod(rootDir!))
                 {
-                    Log("[РћРЁРР‘РљРђ] РЎР±РѕСЂРєР° РјРѕРґР° Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                    Log("[Р С›Р РЃР ВР вЂР С™Р С’] Р РЋР В±Р С•РЎР‚Р С”Р В° Р СР С•Р Т‘Р В° Р В·Р В°Р Р†Р ВµРЎР‚РЎв‚¬Р С‘Р В»Р В°РЎРѓРЎРЉ Р Р…Р ВµРЎС“Р Т‘Р В°РЎвЂЎР Р…Р С•.");
                     return;
                 }
             }
             else
             {
-                Log("[РђР’РўРћРќРћРњРќР«Р™ Р Р•Р–РРњ] Р—Р°РїСѓС‰РµРЅ Р±РµР· РёСЃС…РѕРґРЅРѕРіРѕ РєРѕРґР°. РњРѕРґ Р±СѓРґРµС‚ Р·Р°РіСЂСѓР¶РµРЅ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.");
+                Log("[Р С’Р вЂ™Р СћР С›Р СњР С›Р СљР СњР В«Р в„ў Р В Р вЂўР вЂ“Р ВР Сљ] Р вЂ”Р В°Р С—РЎС“РЎвЂ°Р ВµР Р… Р В±Р ВµР В· Р С‘РЎРѓРЎвЂ¦Р С•Р Т‘Р Р…Р С•Р С–Р С• Р С”Р С•Р Т‘Р В°. Р СљР С•Р Т‘ Р В±РЎС“Р Т‘Р ВµРЎвЂљ Р В·Р В°Р С–РЎР‚РЎС“Р В¶Р ВµР Р… Р В°Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С‘.");
             }
 
-            SetStatus("РџРѕРґРіРѕС‚РѕРІРєР° РґРёСЂРµРєС‚РѕСЂРёРё РёРіСЂС‹...", 15);
+            SetStatus("Р СџР С•Р Т‘Р С–Р С•РЎвЂљР С•Р Р†Р С”Р В° Р Т‘Р С‘РЎР‚Р ВµР С”РЎвЂљР С•РЎР‚Р С‘Р С‘ Р С‘Р С–РЎР‚РЎвЂ№...", 15);
             gameDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".solutionvisuals");
             Directory.CreateDirectory(gameDir);
             Directory.CreateDirectory(Path.Combine(gameDir, "versions"));
@@ -422,31 +508,31 @@ namespace SolutionLauncher
             Directory.CreateDirectory(Path.Combine(gameDir, "mods"));
 
             // 2. Download Minecraft 1.21.4 client and libraries
-            SetStatus("Р—Р°РіСЂСѓР·РєР° РјРµС‚Р°РґР°РЅРЅС‹С… РёРіСЂС‹...", 20);
+            SetStatus("Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р СР ВµРЎвЂљР В°Р Т‘Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦ Р С‘Р С–РЎР‚РЎвЂ№...", 20);
             if (!DownloadMinecraftAndLibraries(gameDir))
             {
-                Log("[РћРЁРР‘РљРђ] Р—Р°РіСЂСѓР·РєР° С„Р°Р№Р»РѕРІ Minecraft Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                Log("[Р С›Р РЃР ВР вЂР С™Р С’] Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° РЎвЂћР В°Р в„–Р В»Р С•Р Р† Minecraft Р В·Р В°Р Р†Р ВµРЎР‚РЎв‚¬Р С‘Р В»Р В°РЎРѓРЎРЉ Р Р…Р ВµРЎС“Р Т‘Р В°РЎвЂЎР Р…Р С•.");
                 return;
             }
 
             // 3. Download Fabric Loader
-            SetStatus("РЈСЃС‚Р°РЅРѕРІРєР° Fabric...", 65);
+            SetStatus("Р Р€РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С”Р В° Fabric...", 65);
             if (!InstallFabric(gameDir))
             {
-                Log("[РћРЁРР‘РљРђ] РЈСЃС‚Р°РЅРѕРІРєР° Fabric Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                Log("[Р С›Р РЃР ВР вЂР С™Р С’] Р Р€РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С”Р В° Fabric Р В·Р В°Р Р†Р ВµРЎР‚РЎв‚¬Р С‘Р В»Р В°РЎРѓРЎРЉ Р Р…Р ВµРЎС“Р Т‘Р В°РЎвЂЎР Р…Р С•.");
                 return;
             }
 
             // 4. Download Fabric API and copy/download SolutionVisual mod
-            SetStatus("РЈСЃС‚Р°РЅРѕРІРєР° РјРѕРґРѕРІ...", 85);
+            SetStatus("Р Р€РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С”Р В° Р СР С•Р Т‘Р С•Р Р†...", 85);
             if (!InstallMods(isDevMode, rootDir, gameDir))
             {
-                Log("[РћРЁРР‘РљРђ] РЈСЃС‚Р°РЅРѕРІРєР° РјРѕРґРѕРІ Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                Log("[Р С›Р РЃР ВР вЂР С™Р С’] Р Р€РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С”Р В° Р СР С•Р Т‘Р С•Р Р† Р В·Р В°Р Р†Р ВµРЎР‚РЎв‚¬Р С‘Р В»Р В°РЎРѓРЎРЉ Р Р…Р ВµРЎС“Р Т‘Р В°РЎвЂЎР Р…Р С•.");
                 return;
             }
 
             // 5. Launch the game
-            SetStatus("Р—Р°РїСѓСЃРє РёРіСЂС‹...", 95);
+            SetStatus("Р вЂ”Р В°Р С—РЎС“РЎРѓР С” Р С‘Р С–РЎР‚РЎвЂ№...", 95);
             LaunchGame(gameDir, nickname, ramGb);
         }
 
@@ -466,7 +552,7 @@ namespace SolutionLauncher
 
         private bool BuildMod(string rootDir)
         {
-            Log("Р—Р°РїСѓСЃРє СЃР±РѕСЂРєРё РјРѕРґР° SolutionVisual...");
+            Log("Р вЂ”Р В°Р С—РЎС“РЎРѓР С” РЎРѓР В±Р С•РЎР‚Р С”Р С‘ Р СР С•Р Т‘Р В° SolutionVisual...");
             var startInfo = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
@@ -483,7 +569,7 @@ namespace SolutionLauncher
                 if (process == null) return false;
 
                 process.OutputDataReceived += (s, e) => { if (e.Data != null) Log($"[Gradle] {e.Data}"); };
-                process.ErrorDataReceived += (s, e) => { if (e.Data != null) Log($"[Gradle РћРЁРР‘РљРђ] {e.Data}"); };
+                process.ErrorDataReceived += (s, e) => { if (e.Data != null) Log($"[Gradle Р С›Р РЃР ВР вЂР С™Р С’] {e.Data}"); };
                 
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
@@ -497,7 +583,7 @@ namespace SolutionLauncher
         {
             try
             {
-                Log("Р—Р°РїСЂРѕСЃ РјР°РЅРёС„РµСЃС‚Р° РІРµСЂСЃРёР№ Mojang...");
+                Log("Р вЂ”Р В°Р С—РЎР‚Р С•РЎРѓ Р СР В°Р Р…Р С‘РЎвЂћР ВµРЎРѓРЎвЂљР В° Р Р†Р ВµРЎР‚РЎРѓР С‘Р в„– Mojang...");
                 string manifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
                 string manifestJson = SafeGetStringAsync(manifestUrl);
                 
@@ -516,11 +602,11 @@ namespace SolutionLauncher
 
                 if (string.IsNullOrEmpty(versionUrl))
                 {
-                    Log("Р’РµСЂСЃРёСЏ 1.21.4 РЅРµ РЅР°Р№РґРµРЅР° РІ РјР°РЅРёС„РµСЃС‚Рµ Mojang.");
+                    Log("Р вЂ™Р ВµРЎР‚РЎРѓР С‘РЎРЏ 1.21.4 Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…Р В° Р Р† Р СР В°Р Р…Р С‘РЎвЂћР ВµРЎРѓРЎвЂљР Вµ Mojang.");
                     return false;
                 }
 
-                Log("Р—Р°РіСЂСѓР·РєР° РїСЂРѕС„РёР»СЏ РІРµСЂСЃРёРё 1.21.4...");
+                Log("Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р С—РЎР‚Р С•РЎвЂћР С‘Р В»РЎРЏ Р Р†Р ВµРЎР‚РЎРѓР С‘Р С‘ 1.21.4...");
                 string versionJson = SafeGetStringAsync(versionUrl);
                 
                 string versionDir = Path.Combine(gameDir, "versions", "1.21.4");
@@ -534,19 +620,19 @@ namespace SolutionLauncher
                 if (!File.Exists(clientJarPath))
                 {
                     string clientUrl = versionDoc.RootElement.GetProperty("downloads").GetProperty("client").GetProperty("url").GetString();
-                    Log($"Р—Р°РіСЂСѓР·РєР° client.jar (1.21.4) РёР· Mojang...");
+                    Log($"Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° client.jar (1.21.4) Р С‘Р В· Mojang...");
                     DownloadFileWithProgress(clientUrl, clientJarPath, 20, 40).GetAwaiter().GetResult();
                 }
                 else
                 {
-                    Log("Minecraft client.jar (1.21.4) СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.");
+                    Log("Minecraft client.jar (1.21.4) РЎС“Р В¶Р Вµ РЎРѓРЎС“РЎвЂ°Р ВµРЎРѓРЎвЂљР Р†РЎС“Р ВµРЎвЂљ.");
                 }
 
                 // Download Libraries
                 var libraries = versionDoc.RootElement.GetProperty("libraries");
                 int libCount = libraries.GetArrayLength();
                 int idx = 0;
-                Log($"РџСЂРѕРІРµСЂРєР° Рё СЃРєР°С‡РёРІР°РЅРёРµ Р±РёР±Р»РёРѕС‚РµРє Mojang ({libCount} С€С‚)...");
+                Log($"Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚Р С”Р В° Р С‘ РЎРѓР С”Р В°РЎвЂЎР С‘Р Р†Р В°Р Р…Р С‘Р Вµ Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С” Mojang ({libCount} РЎв‚¬РЎвЂљ)...");
                 string officialLibDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "libraries");
 
                 foreach (var lib in libraries.EnumerateArray())
@@ -567,19 +653,19 @@ namespace SolutionLauncher
                         string officialPath = Path.Combine(officialLibDir, path);
                         if (File.Exists(officialPath))
                         {
-                            Log($"РљРѕРїРёСЂРѕРІР°РЅРёРµ Р±РёР±Р»РёРѕС‚РµРєРё РёР· .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Р С™Р С•Р С—Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С‘Р Вµ Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С”Р С‘ Р С‘Р В· .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             File.Copy(officialPath, targetPath, true);
                         }
                         else
                         {
-                            Log($"Р—Р°РіСЂСѓР·РєР° Р±РёР±Р»РёРѕС‚РµРєРё ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С”Р С‘ ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             byte[] libBytes = SafeGetByteArrayAsync(url);
                             File.WriteAllBytes(targetPath, libBytes);
                         }
                     }
 
                     double progress = 40.0 + ((double)idx / libCount) * 15.0;
-                    SetStatus("РЎРєР°С‡РёРІР°РЅРёРµ Р±РёР±Р»РёРѕС‚РµРє Mojang...", progress);
+                    SetStatus("Р РЋР С”Р В°РЎвЂЎР С‘Р Р†Р В°Р Р…Р С‘Р Вµ Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С” Mojang...", progress);
                 }
 
                 // Download Asset Index JSON
@@ -591,7 +677,7 @@ namespace SolutionLauncher
                 if (!File.Exists(assetIndexTarget))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(assetIndexTarget));
-                    Log($"Р—Р°РіСЂСѓР·РєР° РёРЅРґРµРєСЃР° СЂРµСЃСѓСЂСЃРѕРІ: {assetIndexId}.json");
+                    Log($"Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р С‘Р Р…Р Т‘Р ВµР С”РЎРѓР В° РЎР‚Р ВµРЎРѓРЎС“РЎР‚РЎРѓР С•Р Р†: {assetIndexId}.json");
                     string assetsJson = SafeGetStringAsync(assetIndexUrl);
                     File.WriteAllText(assetIndexTarget, assetsJson);
                 }
@@ -600,14 +686,14 @@ namespace SolutionLauncher
                 string officialAssetsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "assets");
                 if (Directory.Exists(officialAssetsDir))
                 {
-                    Log("РћР±РЅР°СЂСѓР¶РµРЅР° РїР°РїРєР° СЂРµСЃСѓСЂСЃРѕРІ РѕС„РёС†РёР°Р»СЊРЅРѕРіРѕ Minecraft, СЂРµСЃСѓСЂСЃС‹ Р±СѓРґСѓС‚ СЃР»РёРЅРєРѕРІР°РЅС‹.");
+                    Log("Р С›Р В±Р Р…Р В°РЎР‚РЎС“Р В¶Р ВµР Р…Р В° Р С—Р В°Р С—Р С”Р В° РЎР‚Р ВµРЎРѓРЎС“РЎР‚РЎРѓР С•Р Р† Р С•РЎвЂћР С‘РЎвЂ Р С‘Р В°Р В»РЎРЉР Р…Р С•Р С–Р С• Minecraft, РЎР‚Р ВµРЎРѓРЎС“РЎР‚РЎРѓРЎвЂ№ Р В±РЎС“Р Т‘РЎС“РЎвЂљ РЎРѓР В»Р С‘Р Р…Р С”Р С•Р Р†Р В°Р Р…РЎвЂ№.");
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РџСЂРё Р·Р°РіСЂСѓР·РєРµ Mojang С„Р°Р№Р»РѕРІ: {ex.Message}");
+                Log($"[Р С›Р РЃР ВР вЂР С™Р С’] Р СџРЎР‚Р С‘ Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С”Р Вµ Mojang РЎвЂћР В°Р в„–Р В»Р С•Р Р†: {ex.Message}");
                 return false;
             }
         }
@@ -616,16 +702,23 @@ namespace SolutionLauncher
         {
             if (url.StartsWith("https://raw.githubusercontent.com/"))
             {
+                // 1. Try GitHub API first
                 try
                 {
                     string apiUrl = GetGitHubApiUrl(url);
                     await DownloadFileWithProgressInternal(apiUrl, targetPath, startPct, endPct);
                     return;
                 }
-                catch
+                catch {}
+
+                // 2. Try jsDelivr CDN second
+                try
                 {
-                    // Fall back to original raw URL / mirror flow
+                    string jsdelivrUrl = GetJsDelivrUrl(url);
+                    await DownloadFileWithProgressInternal(jsdelivrUrl, targetPath, startPct, endPct);
+                    return;
                 }
+                catch {}
             }
 
             string resolved = ResolveUrl(url);
@@ -668,6 +761,7 @@ namespace SolutionLauncher
             {
                 request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
             }
+            request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
             using (var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
             {
@@ -701,7 +795,7 @@ namespace SolutionLauncher
         {
             try
             {
-                Log("Р—Р°РїСЂРѕСЃ РјРµС‚Р°РґР°РЅРЅС‹С… РїСЂРѕС„РёР»СЏ Fabric Loader...");
+                Log("Р вЂ”Р В°Р С—РЎР‚Р С•РЎРѓ Р СР ВµРЎвЂљР В°Р Т‘Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦ Р С—РЎР‚Р С•РЎвЂћР С‘Р В»РЎРЏ Fabric Loader...");
                 string fabricProfileUrl = "https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.16.14/profile/json";
                 string profileJson = SafeGetStringAsync(fabricProfileUrl);
 
@@ -713,7 +807,7 @@ namespace SolutionLauncher
                 var libraries = profileDoc.RootElement.GetProperty("libraries");
                 int libCount = libraries.GetArrayLength();
                 int idx = 0;
-                Log($"Р—Р°РіСЂСѓР·РєР° Р±РёР±Р»РёРѕС‚РµРє Fabric ({libCount} С€С‚)...");
+                Log($"Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С” Fabric ({libCount} РЎв‚¬РЎвЂљ)...");
 
                 string officialLibDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "libraries");
                 foreach (var lib in libraries.EnumerateArray())
@@ -733,26 +827,26 @@ namespace SolutionLauncher
                         string officialPath = Path.Combine(officialLibDir, mavenPath);
                         if (File.Exists(officialPath))
                         {
-                            Log($"РљРѕРїРёСЂРѕРІР°РЅРёРµ Fabric Р»РёР±С‹ РёР· .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Р С™Р С•Р С—Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С‘Р Вµ Fabric Р В»Р С‘Р В±РЎвЂ№ Р С‘Р В· .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             File.Copy(officialPath, targetPath, true);
                         }
                         else
                         {
-                            Log($"Р—Р°РіСЂСѓР·РєР° Fabric Р»РёР±С‹ ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Fabric Р В»Р С‘Р В±РЎвЂ№ ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             byte[] libBytes = SafeGetByteArrayAsync(downloadUrl);
                             File.WriteAllBytes(targetPath, libBytes);
                         }
                     }
 
                     double progress = 65.0 + ((double)idx / libCount) * 15.0;
-                    SetStatus("Р—Р°РіСЂСѓР·РєР° Р±РёР±Р»РёРѕС‚РµРє Fabric...", progress);
+                    SetStatus("Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С” Fabric...", progress);
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РџСЂРё СѓСЃС‚Р°РЅРѕРІРєРµ Fabric: {ex.Message}");
+                Log($"[Р С›Р РЃР ВР вЂР С™Р С’] Р СџРЎР‚Р С‘ РЎС“РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С”Р Вµ Fabric: {ex.Message}");
                 return false;
             }
         }
@@ -781,13 +875,13 @@ namespace SolutionLauncher
                 string fabricApiTarget = Path.Combine(gameDir, "mods", "fabric-api-0.119.4+1.21.4.jar");
                 if (!File.Exists(fabricApiTarget))
                 {
-                    Log("Р—Р°РіСЂСѓР·РєР° Fabric API РёР· Maven...");
+                    Log("Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Fabric API Р С‘Р В· Maven...");
                     string fabricApiUrl = "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/0.119.4+1.21.4/fabric-api-0.119.4+1.21.4.jar";
                     DownloadFileWithProgress(fabricApiUrl, fabricApiTarget, 85, 90).GetAwaiter().GetResult();
                 }
                 else
                 {
-                    Log("Fabric API СѓР¶Рµ СѓСЃС‚Р°РЅРѕРІР»РµРЅ.");
+                    Log("Fabric API РЎС“Р В¶Р Вµ РЎС“РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р В»Р ВµР Р….");
                 }
 
                 // 2. Install SolutionVisual mod
@@ -812,13 +906,13 @@ namespace SolutionLauncher
 
                     if (File.Exists(compiledModJar))
                     {
-                        Log($"РљРѕРїРёСЂРѕРІР°РЅРёРµ РјРѕРґР° SolutionVisual РёР· {Path.GetFileName(compiledModJar)}...");
+                        Log($"Р С™Р С•Р С—Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С‘Р Вµ Р СР С•Р Т‘Р В° SolutionVisual Р С‘Р В· {Path.GetFileName(compiledModJar)}...");
                         File.Copy(compiledModJar, targetModJar, true);
-                        Log("РњРѕРґ SolutionVisual СѓСЃРїРµС€РЅРѕ СЃРєРѕРїРёСЂРѕРІР°РЅ.");
+                        Log("Р СљР С•Р Т‘ SolutionVisual РЎС“РЎРѓР С—Р ВµРЎв‚¬Р Р…Р С• РЎРѓР С”Р С•Р С—Р С‘РЎР‚Р С•Р Р†Р В°Р Р….");
                     }
                     else
                     {
-                        Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РЎРєРѕРјРїРёР»РёСЂРѕРІР°РЅРЅС‹Р№ РјРѕРґ РЅРµ РЅР°Р№РґРµРЅ РїРѕ РїСѓС‚Рё: {compiledModJar}");
+                        Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р РЋР С”Р С•Р СР С—Р С‘Р В»Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р Р…РЎвЂ№Р в„– Р СР С•Р Т‘ Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р… Р С—Р С• Р С—РЎС“РЎвЂљР С‘: {compiledModJar}");
                     }
                 }
                 else
@@ -832,38 +926,38 @@ namespace SolutionLauncher
                     
                     try
                     {
-                        Log("РџСЂРѕРІРµСЂРєР° РѕР±РЅРѕРІР»РµРЅРёР№ РјРѕРґР° SolutionVisual...");
+                        Log("Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚Р С”Р В° Р С•Р В±Р Р…Р С•Р Р†Р В»Р ВµР Р…Р С‘Р в„– Р СР С•Р Т‘Р В° SolutionVisual...");
                         latestVersion = SafeGetStringAsync(remoteVersionUrl).Trim();
                         if (string.IsNullOrEmpty(currentModVersion) || currentModVersion != latestVersion || !File.Exists(targetModJar))
                         {
                             needDownload = true;
                             if (!string.IsNullOrEmpty(latestVersion))
                             {
-                                Log($"Р”РѕСЃС‚СѓРїРЅР° РЅРѕРІР°СЏ РІРµСЂСЃРёСЏ РјРѕРґР°: {latestVersion} (СѓСЃС‚Р°РЅРѕРІР»РµРЅР°: {(string.IsNullOrEmpty(currentModVersion) ? "РЅРµС‚" : currentModVersion)})");
+                                Log($"Р вЂќР С•РЎРѓРЎвЂљРЎС“Р С—Р Р…Р В° Р Р…Р С•Р Р†Р В°РЎРЏ Р Р†Р ВµРЎР‚РЎРѓР С‘РЎРЏ Р СР С•Р Т‘Р В°: {latestVersion} (РЎС“РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р В»Р ВµР Р…Р В°: {(string.IsNullOrEmpty(currentModVersion) ? "Р Р…Р ВµРЎвЂљ" : currentModVersion)})");
                             }
                         }
                         else
                         {
-                            Log($"РњРѕРґ SolutionVisual СѓР¶Рµ РѕР±РЅРѕРІР»РµРЅ (РІРµСЂСЃРёСЏ {currentModVersion}).");
+                            Log($"Р СљР С•Р Т‘ SolutionVisual РЎС“Р В¶Р Вµ Р С•Р В±Р Р…Р С•Р Р†Р В»Р ВµР Р… (Р Р†Р ВµРЎР‚РЎРѓР С‘РЎРЏ {currentModVersion}).");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕРІРµСЂРёС‚СЊ РѕР±РЅРѕРІР»РµРЅРёСЏ РјРѕРґР°: {ex.Message}");
+                        Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С—РЎР‚Р С•Р Р†Р ВµРЎР‚Р С‘РЎвЂљРЎРЉ Р С•Р В±Р Р…Р С•Р Р†Р В»Р ВµР Р…Р С‘РЎРЏ Р СР С•Р Т‘Р В°: {ex.Message}");
                         if (!File.Exists(targetModJar))
                         {
                             needDownload = true;
-                            Log("Р›РѕРєР°Р»СЊРЅС‹Р№ С„Р°Р№Р» РјРѕРґР° РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚. Р‘СѓРґРµС‚ РІС‹РїРѕР»РЅРµРЅР° РїРѕРїС‹С‚РєР° Р·Р°РіСЂСѓР·РєРё...");
+                            Log("Р вЂєР С•Р С”Р В°Р В»РЎРЉР Р…РЎвЂ№Р в„– РЎвЂћР В°Р в„–Р В» Р СР С•Р Т‘Р В° Р С•РЎвЂљРЎРѓРЎС“РЎвЂљРЎРѓРЎвЂљР Р†РЎС“Р ВµРЎвЂљ. Р вЂРЎС“Р Т‘Р ВµРЎвЂљ Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…Р ВµР Р…Р В° Р С—Р С•Р С—РЎвЂ№РЎвЂљР С”Р В° Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С”Р С‘...");
                         }
                     }
                     
                     if (needDownload)
                     {
-                        Log("Р—Р°РіСЂСѓР·РєР° РіРѕС‚РѕРІРѕРіРѕ РјРѕРґР° SolutionVisual СЃ СѓРґР°Р»РµРЅРЅРѕРіРѕ СЃРµСЂРІРµСЂР°...");
+                        Log("Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р С–Р С•РЎвЂљР С•Р Р†Р С•Р С–Р С• Р СР С•Р Т‘Р В° SolutionVisual РЎРѓ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р Р…Р С•Р С–Р С• РЎРѓР ВµРЎР‚Р Р†Р ВµРЎР‚Р В°...");
                         try
                         {
                             DownloadFileWithProgress(remoteModUrl, targetModJar, 90, 95).GetAwaiter().GetResult();
-                            Log("РњРѕРґ SolutionVisual СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅ.");
+                            Log("Р СљР С•Р Т‘ SolutionVisual РЎС“РЎРѓР С—Р ВµРЎв‚¬Р Р…Р С• Р В·Р В°Р С–РЎР‚РЎС“Р В¶Р ВµР Р….");
                             if (!string.IsNullOrEmpty(latestVersion))
                             {
                                 currentModVersion = latestVersion;
@@ -872,7 +966,7 @@ namespace SolutionLauncher
                         }
                         catch (Exception ex)
                         {
-                            Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РќРµ СѓРґР°Р»РѕСЃСЊ СЃРєР°С‡Р°С‚СЊ РјРѕРґ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ ({ex.Message}). Р‘СѓРґРµС‚ Р·Р°РїСѓС‰РµРЅ С‡РёСЃС‚С‹Р№ Fabric.");
+                            Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ РЎРѓР С”Р В°РЎвЂЎР В°РЎвЂљРЎРЉ Р СР С•Р Т‘ Р С—Р С• РЎС“Р СР С•Р В»РЎвЂЎР В°Р Р…Р С‘РЎР‹ ({ex.Message}). Р вЂРЎС“Р Т‘Р ВµРЎвЂљ Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р… РЎвЂЎР С‘РЎРѓРЎвЂљРЎвЂ№Р в„– Fabric.");
                         }
                     }
                 }
@@ -881,7 +975,7 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РџСЂРё СѓСЃС‚Р°РЅРѕРІРєРµ РјРѕРґРѕРІ: {ex.Message}");
+                Log($"[Р С›Р РЃР ВР вЂР С™Р С’] Р СџРЎР‚Р С‘ РЎС“РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С”Р Вµ Р СР С•Р Т‘Р С•Р Р†: {ex.Message}");
                 return false;
             }
         }
@@ -890,11 +984,11 @@ namespace SolutionLauncher
         {
             try
             {
-                Log("РџРѕРёСЃРє Java...");
+                Log("Р СџР С•Р С‘РЎРѓР С” Java...");
                 string javaPath = FindJavaExecutable(gameDir);
                 if (string.IsNullOrEmpty(javaPath))
                 {
-                    Log("[РћРЁРР‘РљРђ] Java РЅРµ РЅР°Р№РґРµРЅР° РЅР° РІР°С€РµРј РєРѕРјРїСЊСЋС‚РµСЂРµ Рё РЅРµ СѓРґР°Р»РѕСЃСЊ СЃРєР°С‡Р°С‚СЊ РµС‘ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.");
+                    Log("[Р С›Р РЃР ВР вЂР С™Р С’] Java Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…Р В° Р Р…Р В° Р Р†Р В°РЎв‚¬Р ВµР С Р С”Р С•Р СР С—РЎРЉРЎР‹РЎвЂљР ВµРЎР‚Р Вµ Р С‘ Р Р…Р Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ РЎРѓР С”Р В°РЎвЂЎР В°РЎвЂљРЎРЉ Р ВµРЎвЂ Р В°Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С‘.");
                     return;
                 }
 
@@ -906,12 +1000,12 @@ namespace SolutionLauncher
                 int majorVersion = GetJavaMajorVersion(javaPath);
                 if (majorVersion > 0 && majorVersion < 21)
                 {
-                    Log($"[РћРЁРР‘РљРђ] РћР±РЅР°СЂСѓР¶РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ Java ({majorVersion}) РЅРµ РїРѕРґС…РѕРґРёС‚. РўСЂРµР±СѓРµС‚СЃСЏ Java 21 РёР»Рё РЅРѕРІРµРµ.");
+                    Log($"[Р С›Р РЃР ВР вЂР С™Р С’] Р С›Р В±Р Р…Р В°РЎР‚РЎС“Р В¶Р ВµР Р…Р Р…Р В°РЎРЏ Р Р†Р ВµРЎР‚РЎРѓР С‘РЎРЏ Java ({majorVersion}) Р Р…Р Вµ Р С—Р С•Р Т‘РЎвЂ¦Р С•Р Т‘Р С‘РЎвЂљ. Р СћРЎР‚Р ВµР В±РЎС“Р ВµРЎвЂљРЎРѓРЎРЏ Java 21 Р С‘Р В»Р С‘ Р Р…Р С•Р Р†Р ВµР Вµ.");
                     Dispatcher.Invoke(() =>
                     {
                         MessageBox.Show(
-                            $"Р”Р»СЏ Р·Р°РїСѓСЃРєР° РёРіСЂС‹ С‚СЂРµР±СѓРµС‚СЃСЏ Java 21 РёР»Рё РІС‹С€Рµ. РћР±РЅР°СЂСѓР¶РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ РЅР° РІР°С€РµРј РџРљ: {majorVersion} ({javaPath}).\n\nРџРѕР¶Р°Р»СѓР№СЃС‚Р°, СѓСЃС‚Р°РЅРѕРІРёС‚Рµ Java 21 РёР»Рё РїСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє РёРЅС‚РµСЂРЅРµС‚Сѓ, С‡С‚РѕР±С‹ Р»Р°СѓРЅС‡РµСЂ РјРѕРі СЃРєР°С‡Р°С‚СЊ РµС‘ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.",
-                            "РќРµСЃРѕРІРјРµСЃС‚РёРјР°СЏ РІРµСЂСЃРёСЏ Java",
+                            $"Р вЂќР В»РЎРЏ Р В·Р В°Р С—РЎС“РЎРѓР С”Р В° Р С‘Р С–РЎР‚РЎвЂ№ РЎвЂљРЎР‚Р ВµР В±РЎС“Р ВµРЎвЂљРЎРѓРЎРЏ Java 21 Р С‘Р В»Р С‘ Р Р†РЎвЂ№РЎв‚¬Р Вµ. Р С›Р В±Р Р…Р В°РЎР‚РЎС“Р В¶Р ВµР Р…Р Р…Р В°РЎРЏ Р Р†Р ВµРЎР‚РЎРѓР С‘РЎРЏ Р Р…Р В° Р Р†Р В°РЎв‚¬Р ВµР С Р СџР С™: {majorVersion} ({javaPath}).\n\nР СџР С•Р В¶Р В°Р В»РЎС“Р в„–РЎРѓРЎвЂљР В°, РЎС“РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С‘РЎвЂљР Вµ Java 21 Р С‘Р В»Р С‘ Р С—РЎР‚Р С•Р Р†Р ВµРЎР‚РЎРЉРЎвЂљР Вµ Р С—Р С•Р Т‘Р С”Р В»РЎР‹РЎвЂЎР ВµР Р…Р С‘Р Вµ Р С” Р С‘Р Р…РЎвЂљР ВµРЎР‚Р Р…Р ВµРЎвЂљРЎС“, РЎвЂЎРЎвЂљР С•Р В±РЎвЂ№ Р В»Р В°РЎС“Р Р…РЎвЂЎР ВµРЎР‚ Р СР С•Р С– РЎРѓР С”Р В°РЎвЂЎР В°РЎвЂљРЎРЉ Р ВµРЎвЂ Р В°Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С‘.",
+                            "Р СњР ВµРЎРѓР С•Р Р†Р СР ВµРЎРѓРЎвЂљР С‘Р СР В°РЎРЏ Р Р†Р ВµРЎР‚РЎРѓР С‘РЎРЏ Java",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error
                         );
@@ -919,10 +1013,10 @@ namespace SolutionLauncher
                     return;
                 }
 
-                Log($"РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Java: {javaPath}");
+                Log($"Р ВРЎРѓР С—Р С•Р В»РЎРЉР В·РЎС“Р ВµРЎвЂљРЎРѓРЎРЏ Java: {javaPath}");
 
                 // Classpath Construction
-                Log("РџРѕСЃС‚СЂРѕРµРЅРёРµ classpath...");
+                Log("Р СџР С•РЎРѓРЎвЂљРЎР‚Р С•Р ВµР Р…Р С‘Р Вµ classpath...");
                 var classpathJars = new List<string>();
 
                 // Add Minecraft client jar
@@ -996,7 +1090,7 @@ namespace SolutionLauncher
                     }
                     catch (Exception ex)
                     {
-                        Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РћС€РёР±РєР° РїСЂРё С‡С‚РµРЅРёРё Р±РёР±Р»РёРѕС‚РµРє 1.21.4.json: {ex.Message}");
+                        Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р С—РЎР‚Р С‘ РЎвЂЎРЎвЂљР ВµР Р…Р С‘Р С‘ Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С” 1.21.4.json: {ex.Message}");
                     }
                 }
 
@@ -1030,7 +1124,7 @@ namespace SolutionLauncher
                     }
                     catch (Exception ex)
                     {
-                        Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РћС€РёР±РєР° РїСЂРё С‡С‚РµРЅРёРё Р±РёР±Р»РёРѕС‚РµРє Fabric json: {ex.Message}");
+                        Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р С—РЎР‚Р С‘ РЎвЂЎРЎвЂљР ВµР Р…Р С‘Р С‘ Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С” Fabric json: {ex.Message}");
                     }
                 }
 
@@ -1043,7 +1137,7 @@ namespace SolutionLauncher
                     }
                     else
                     {
-                        Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] Р¤Р°Р№Р» Р±РёР±Р»РёРѕС‚РµРєРё РЅРµ РЅР°Р№РґРµРЅ: {Path.GetFileName(libPath)}");
+                        Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р В¤Р В°Р в„–Р В» Р В±Р С‘Р В±Р В»Р С‘Р С•РЎвЂљР ВµР С”Р С‘ Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…: {Path.GetFileName(libPath)}");
                     }
                 }
 
@@ -1062,7 +1156,7 @@ namespace SolutionLauncher
 
                 // Write arguments to a local file to bypass Windows command-line argument length limit (32k characters)
                 string argsFilePath = Path.Combine(gameDir, "launch.args");
-                Log("Р—Р°РїРёСЃСЊ Р°СЂРіСѓРјРµРЅС‚РѕРІ Р·Р°РїСѓСЃРєР° РІ launch.args...");
+                Log("Р вЂ”Р В°Р С—Р С‘РЎРѓРЎРЉ Р В°РЎР‚Р С–РЎС“Р СР ВµР Р…РЎвЂљР С•Р Р† Р В·Р В°Р С—РЎС“РЎРѓР С”Р В° Р Р† launch.args...");
 
                 string FormatArg(string arg)
                 {
@@ -1105,7 +1199,7 @@ namespace SolutionLauncher
 
                 File.WriteAllLines(argsFilePath, formattedArgs);
 
-                Log("Р—Р°РїСѓСЃРє РїСЂРѕС†РµСЃСЃР° Minecraft...");
+                Log("Р вЂ”Р В°Р С—РЎС“РЎРѓР С” Р С—РЎР‚Р С•РЎвЂ Р ВµРЎРѓРЎРѓР В° Minecraft...");
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = javaPath,
@@ -1120,7 +1214,7 @@ namespace SolutionLauncher
                 gameProcess = Process.Start(startInfo);
                 if (gameProcess == null)
                 {
-                    Log("[РћРЁРР‘РљРђ] РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РїСЂРѕС†РµСЃСЃ РёРіСЂС‹.");
+                    Log("[Р С›Р РЃР ВР вЂР С™Р С’] Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С—РЎС“РЎРѓРЎвЂљР С‘РЎвЂљРЎРЉ Р С—РЎР‚Р С•РЎвЂ Р ВµРЎРѓРЎРѓ Р С‘Р С–РЎР‚РЎвЂ№.");
                     return;
                 }
                 bool memoryErrorDetected = false;
@@ -1139,8 +1233,8 @@ namespace SolutionLauncher
                 { 
                     if (e.Data != null) 
                     {
-                        Log($"[Minecraft РћРЁРР‘РљРђ] {e.Data}");
-                        if (e.Data.Contains("insufficient memory") || e.Data.Contains("commit_memory") || e.Data.Contains("errno=1455") || e.Data.Contains("Р¤Р°Р№Р» РїРѕРґРєР°С‡РєРё СЃР»РёС€РєРѕРј РјР°Р»"))
+                        Log($"[Minecraft Р С›Р РЃР ВР вЂР С™Р С’] {e.Data}");
+                        if (e.Data.Contains("insufficient memory") || e.Data.Contains("commit_memory") || e.Data.Contains("errno=1455") || e.Data.Contains("Р В¤Р В°Р в„–Р В» Р С—Р С•Р Т‘Р С”Р В°РЎвЂЎР С”Р С‘ РЎРѓР В»Р С‘РЎв‚¬Р С”Р С•Р С Р СР В°Р В»"))
                         {
                             memoryErrorDetected = true;
                         }
@@ -1150,15 +1244,15 @@ namespace SolutionLauncher
                 gameProcess.BeginOutputReadLine();
                 gameProcess.BeginErrorReadLine();
 
-                Log("РРіСЂР° Р·Р°РїСѓС‰РµРЅР°! Р’С‹РІРѕРґ РєРѕРЅСЃРѕР»Рё РїРµСЂРµРЅР°РїСЂР°РІР»РµРЅ СЃСЋРґР°.");
-                SetStatus("РРіСЂР° Р·Р°РїСѓС‰РµРЅР°", 100);
+                Log("Р ВР С–РЎР‚Р В° Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р…Р В°! Р вЂ™РЎвЂ№Р Р†Р С•Р Т‘ Р С”Р С•Р Р…РЎРѓР С•Р В»Р С‘ Р С—Р ВµРЎР‚Р ВµР Р…Р В°Р С—РЎР‚Р В°Р Р†Р В»Р ВµР Р… РЎРѓРЎР‹Р Т‘Р В°.");
+                SetStatus("Р ВР С–РЎР‚Р В° Р В·Р В°Р С—РЎС“РЎвЂ°Р ВµР Р…Р В°", 100);
 
                 // Wait for exit in background task
                 Task.Run(() =>
                 {
                     gameProcess.WaitForExit();
-                    Log($"[Solution Launcher] РџСЂРѕС†РµСЃСЃ РёРіСЂС‹ Р·Р°РІРµСЂС€РёР»СЃСЏ СЃ РєРѕРґРѕРј {gameProcess.ExitCode}");
-                    SetStatus("Р“РѕС‚РѕРІ Рє Р·Р°РїСѓСЃРєСѓ", 0);
+                    Log($"[Solution Launcher] Р СџРЎР‚Р С•РЎвЂ Р ВµРЎРѓРЎРѓ Р С‘Р С–РЎР‚РЎвЂ№ Р В·Р В°Р Р†Р ВµРЎР‚РЎв‚¬Р С‘Р В»РЎРѓРЎРЏ РЎРѓ Р С”Р С•Р Т‘Р С•Р С {gameProcess.ExitCode}");
+                    SetStatus("Р вЂњР С•РЎвЂљР С•Р Р† Р С” Р В·Р В°Р С—РЎС“РЎРѓР С”РЎС“", 0);
                     if (memoryErrorDetected)
                     {
                         Dispatcher.Invoke(() =>
@@ -1169,15 +1263,15 @@ namespace SolutionLauncher
                             if (newRam < currentRam)
                             {
                                 RamSlider.Value = newRam;
-                                RamValueText.Text = $"{newRam} Р“Р‘";
+                                RamValueText.Text = $"{newRam} Р вЂњР вЂ";
                                 SaveConfig();
-                                Log($"[РЎРРЎРўР•РњРђ] РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё СѓРјРµРЅСЊС€РµРЅРѕ РІС‹РґРµР»РµРЅРёРµ RAM СЃ {currentRam} Р“Р‘ РґРѕ {newRam} Р“Р‘ РёР·-Р·Р° РѕС€РёР±РєРё РїР°РјСЏС‚Рё.");
+                                Log($"[Р РЋР ВР РЋР СћР вЂўР СљР С’] Р С’Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С‘ РЎС“Р СР ВµР Р…РЎРЉРЎв‚¬Р ВµР Р…Р С• Р Р†РЎвЂ№Р Т‘Р ВµР В»Р ВµР Р…Р С‘Р Вµ RAM РЎРѓ {currentRam} Р вЂњР вЂ Р Т‘Р С• {newRam} Р вЂњР вЂ Р С‘Р В·-Р В·Р В° Р С•РЎв‚¬Р С‘Р В±Р С”Р С‘ Р С—Р В°Р СРЎРЏРЎвЂљР С‘.");
                                 
                                 MessageBox.Show(
-                                    $"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РёРіСЂСѓ РёР·-Р·Р° РЅРµС…РІР°С‚РєРё РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РїР°РјСЏС‚Рё (С„Р°Р№Р»Р° РїРѕРґРєР°С‡РєРё) РЅР° РІР°С€РµРј РєРѕРјРїСЊСЋС‚РµСЂРµ.\n\n" +
-                                    $"РњС‹ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СѓРјРµРЅСЊС€РёР»Рё РІС‹РґРµР»РµРЅРёРµ РѕРїРµСЂР°С‚РёРІРЅРѕР№ РїР°РјСЏС‚Рё РІ РЅР°СЃС‚СЂРѕР№РєР°С… РґРѕ {newRam} Р“Р‘.\n\n" +
-                                    "РџРѕР¶Р°Р»СѓР№СЃС‚Р°, РїРѕРїСЂРѕР±СѓР№С‚Рµ РЅР°Р¶Р°С‚СЊ РєРЅРѕРїРєСѓ 'РќР°С‡Р°С‚СЊ РёРіСЂСѓ' СЃРЅРѕРІР°.",
-                                    "РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РїР°РјСЏС‚Рё",
+                                    $"Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С—РЎС“РЎРѓРЎвЂљР С‘РЎвЂљРЎРЉ Р С‘Р С–РЎР‚РЎС“ Р С‘Р В·-Р В·Р В° Р Р…Р ВµРЎвЂ¦Р Р†Р В°РЎвЂљР С”Р С‘ Р Р†Р С‘РЎР‚РЎвЂљРЎС“Р В°Р В»РЎРЉР Р…Р С•Р в„– Р С—Р В°Р СРЎРЏРЎвЂљР С‘ (РЎвЂћР В°Р в„–Р В»Р В° Р С—Р С•Р Т‘Р С”Р В°РЎвЂЎР С”Р С‘) Р Р…Р В° Р Р†Р В°РЎв‚¬Р ВµР С Р С”Р С•Р СР С—РЎРЉРЎР‹РЎвЂљР ВµРЎР‚Р Вµ.\n\n" +
+                                    $"Р СљРЎвЂ№ Р В°Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С‘ РЎС“Р СР ВµР Р…РЎРЉРЎв‚¬Р С‘Р В»Р С‘ Р Р†РЎвЂ№Р Т‘Р ВµР В»Р ВµР Р…Р С‘Р Вµ Р С•Р С—Р ВµРЎР‚Р В°РЎвЂљР С‘Р Р†Р Р…Р С•Р в„– Р С—Р В°Р СРЎРЏРЎвЂљР С‘ Р Р† Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”Р В°РЎвЂ¦ Р Т‘Р С• {newRam} Р вЂњР вЂ.\n\n" +
+                                    "Р СџР С•Р В¶Р В°Р В»РЎС“Р в„–РЎРѓРЎвЂљР В°, Р С—Р С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р Р…Р В°Р В¶Р В°РЎвЂљРЎРЉ Р С”Р Р…Р С•Р С—Р С”РЎС“ 'Р СњР В°РЎвЂЎР В°РЎвЂљРЎРЉ Р С‘Р С–РЎР‚РЎС“' РЎРѓР Р…Р С•Р Р†Р В°.",
+                                    "Р СњР ВµР Т‘Р С•РЎРѓРЎвЂљР В°РЎвЂљР С•РЎвЂЎР Р…Р С• Р Р†Р С‘РЎР‚РЎвЂљРЎС“Р В°Р В»РЎРЉР Р…Р С•Р в„– Р С—Р В°Р СРЎРЏРЎвЂљР С‘",
                                     MessageBoxButton.OK,
                                     MessageBoxImage.Warning
                                 );
@@ -1185,11 +1279,11 @@ namespace SolutionLauncher
                             else
                             {
                                 MessageBox.Show(
-                                    "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РёРіСЂСѓ РёР·-Р·Р° РЅРµС…РІР°С‚РєРё РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РїР°РјСЏС‚Рё (С„Р°Р№Р»Р° РїРѕРґРєР°С‡РєРё) РЅР° РІР°С€РµРј РєРѕРјРїСЊСЋС‚РµСЂРµ.\n\n" +
-                                    "Р РµС€РµРЅРёСЏ:\n" +
-                                    "1. Р—Р°РєСЂРѕР№С‚Рµ РІСЃРµ Р»РёС€РЅРёРµ РїСЂРѕРіСЂР°РјРјС‹ (Р±СЂР°СѓР·РµСЂС‹, Discord, РґСЂСѓРіРёРµ РёРіСЂС‹).\n" +
-                                    "2. РЈРІРµР»РёС‡СЊС‚Рµ СЂР°Р·РјРµСЂ С„Р°Р№Р»Р° РїРѕРґРєР°С‡РєРё РІ РЅР°СЃС‚СЂРѕР№РєР°С… Windows (РёР»Рё РІРєР»СЋС‡РёС‚Рµ РµРіРѕ, РµСЃР»Рё РѕРЅ РѕС‚РєР»СЋС‡РµРЅ).",
-                                    "РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РїР°РјСЏС‚Рё",
+                                    "Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С—РЎС“РЎРѓРЎвЂљР С‘РЎвЂљРЎРЉ Р С‘Р С–РЎР‚РЎС“ Р С‘Р В·-Р В·Р В° Р Р…Р ВµРЎвЂ¦Р Р†Р В°РЎвЂљР С”Р С‘ Р Р†Р С‘РЎР‚РЎвЂљРЎС“Р В°Р В»РЎРЉР Р…Р С•Р в„– Р С—Р В°Р СРЎРЏРЎвЂљР С‘ (РЎвЂћР В°Р в„–Р В»Р В° Р С—Р С•Р Т‘Р С”Р В°РЎвЂЎР С”Р С‘) Р Р…Р В° Р Р†Р В°РЎв‚¬Р ВµР С Р С”Р С•Р СР С—РЎРЉРЎР‹РЎвЂљР ВµРЎР‚Р Вµ.\n\n" +
+                                    "Р В Р ВµРЎв‚¬Р ВµР Р…Р С‘РЎРЏ:\n" +
+                                    "1. Р вЂ”Р В°Р С”РЎР‚Р С•Р в„–РЎвЂљР Вµ Р Р†РЎРѓР Вµ Р В»Р С‘РЎв‚¬Р Р…Р С‘Р Вµ Р С—РЎР‚Р С•Р С–РЎР‚Р В°Р СР СРЎвЂ№ (Р В±РЎР‚Р В°РЎС“Р В·Р ВµРЎР‚РЎвЂ№, Discord, Р Т‘РЎР‚РЎС“Р С–Р С‘Р Вµ Р С‘Р С–РЎР‚РЎвЂ№).\n" +
+                                    "2. Р Р€Р Р†Р ВµР В»Р С‘РЎвЂЎРЎРЉРЎвЂљР Вµ РЎР‚Р В°Р В·Р СР ВµРЎР‚ РЎвЂћР В°Р в„–Р В»Р В° Р С—Р С•Р Т‘Р С”Р В°РЎвЂЎР С”Р С‘ Р Р† Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”Р В°РЎвЂ¦ Windows (Р С‘Р В»Р С‘ Р Р†Р С”Р В»РЎР‹РЎвЂЎР С‘РЎвЂљР Вµ Р ВµР С–Р С•, Р ВµРЎРѓР В»Р С‘ Р С•Р Р… Р С•РЎвЂљР С”Р В»РЎР‹РЎвЂЎР ВµР Р…).",
+                                    "Р СњР ВµР Т‘Р С•РЎРѓРЎвЂљР В°РЎвЂљР С•РЎвЂЎР Р…Р С• Р Р†Р С‘РЎР‚РЎвЂљРЎС“Р В°Р В»РЎРЉР Р…Р С•Р в„– Р С—Р В°Р СРЎРЏРЎвЂљР С‘",
                                     MessageBoxButton.OK,
                                     MessageBoxImage.Warning
                                 );
@@ -1205,7 +1299,7 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] Р’Рѕ РІСЂРµРјСЏ Р·Р°РїСѓСЃРєР° РїСЂРѕС†РµСЃСЃР°: {ex.Message}");
+                Log($"[Р С›Р РЃР ВР вЂР С™Р С’] Р вЂ™Р С• Р Р†РЎР‚Р ВµР СРЎРЏ Р В·Р В°Р С—РЎС“РЎРѓР С”Р В° Р С—РЎР‚Р С•РЎвЂ Р ВµРЎРѓРЎРѓР В°: {ex.Message}");
             }
         }
 
@@ -1261,15 +1355,15 @@ namespace SolutionLauncher
             // 5. Try to download portable JRE 21 from Adoptium API
             try
             {
-                Log("Java 21 РЅРµ РЅР°Р№РґРµРЅР°. РќР°С‡РёРЅР°РµРј Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєСѓСЋ Р·Р°РіСЂСѓР·РєСѓ РїРѕСЂС‚Р°С‚РёРІРЅРѕР№ Java 21 JRE...");
+                Log("Java 21 Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…Р В°. Р СњР В°РЎвЂЎР С‘Р Р…Р В°Р ВµР С Р В°Р Р†РЎвЂљР С•Р СР В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”РЎС“РЎР‹ Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С”РЎС“ Р С—Р С•РЎР‚РЎвЂљР В°РЎвЂљР С‘Р Р†Р Р…Р С•Р в„– Java 21 JRE...");
                 string jreZipPath = Path.Combine(gameDir, "jre21.zip");
                 string downloadUrl = "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse";
 
-                SetStatus("Р—Р°РіСЂСѓР·РєР° Java 21...", 5);
+                SetStatus("Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Java 21...", 5);
                 DownloadFileWithProgress(downloadUrl, jreZipPath, 5, 45).GetAwaiter().GetResult();
 
-                Log("Р—Р°РіСЂСѓР·РєР° Р·Р°РІРµСЂС€РµРЅР°. Р Р°СЃРїР°РєРѕРІРєР° Java 21...");
-                SetStatus("Р Р°СЃРїР°РєРѕРІРєР° Java 21...", 45);
+                Log("Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В° Р В·Р В°Р Р†Р ВµРЎР‚РЎв‚¬Р ВµР Р…Р В°. Р В Р В°РЎРѓР С—Р В°Р С”Р С•Р Р†Р С”Р В° Java 21...");
+                SetStatus("Р В Р В°РЎРѓР С—Р В°Р С”Р С•Р Р†Р С”Р В° Java 21...", 45);
 
                 if (Directory.Exists(portableJreDir))
                 {
@@ -1288,13 +1382,13 @@ namespace SolutionLauncher
                 var javaws = Directory.GetFiles(portableJreDir, "javaw.exe", SearchOption.AllDirectories);
                 if (javaws.Length > 0)
                 {
-                    Log("РџРѕСЂС‚Р°С‚РёРІРЅР°СЏ Java 21 СѓСЃРїРµС€РЅРѕ СѓСЃС‚Р°РЅРѕРІР»РµРЅР°.");
+                    Log("Р СџР С•РЎР‚РЎвЂљР В°РЎвЂљР С‘Р Р†Р Р…Р В°РЎРЏ Java 21 РЎС“РЎРѓР С—Р ВµРЎв‚¬Р Р…Р С• РЎС“РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р В»Р ВµР Р…Р В°.");
                     return javaws[0];
                 }
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РќРµ СѓРґР°Р»РѕСЃСЊ СЃРєР°С‡Р°С‚СЊ РїРѕСЂС‚Р°С‚РёРІРЅСѓСЋ Java 21: {ex.Message}");
+                Log($"[Р С›Р РЃР ВР вЂР С™Р С’] Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ РЎРѓР С”Р В°РЎвЂЎР В°РЎвЂљРЎРЉ Р С—Р С•РЎР‚РЎвЂљР В°РЎвЂљР С‘Р Р†Р Р…РЎС“РЎР‹ Java 21: {ex.Message}");
             }
 
             // 6. Fallback to system path search
@@ -1420,7 +1514,7 @@ namespace SolutionLauncher
         {
             if (RamValueText != null)
             {
-                RamValueText.Text = $"{(int)RamSlider.Value} Р“Р‘";
+                RamValueText.Text = $"{(int)RamSlider.Value} Р вЂњР вЂ";
             }
         }
 
@@ -1445,7 +1539,7 @@ namespace SolutionLauncher
                         NicknameInput.Text = config.Nickname ?? "Player";
                         int loadedRam = config.RamGb > 0 ? config.RamGb : GetDefaultRamGb();
                         RamSlider.Value = Math.Min(loadedRam, RamSlider.Maximum);
-                        RamValueText.Text = $"{(int)RamSlider.Value} Р“Р‘";
+                        RamValueText.Text = $"{(int)RamSlider.Value} Р вЂњР вЂ";
                         currentModVersion = config.ModVersion ?? "";
                         return;
                     }
@@ -1453,12 +1547,12 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё: {ex.Message}");
+                Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С‘РЎвЂљРЎРЉ Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”Р С‘: {ex.Message}");
             }
             NicknameInput.Text = "Player";
             int defaultRam = GetDefaultRamGb();
             RamSlider.Value = defaultRam;
-            RamValueText.Text = $"{defaultRam} Р“Р‘";
+            RamValueText.Text = $"{defaultRam} Р вЂњР вЂ";
             currentModVersion = "";
         }
 
@@ -1483,7 +1577,7 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё: {ex.Message}");
+                Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р С‘РЎвЂљРЎРЉ Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”Р С‘: {ex.Message}");
             }
         }
 
@@ -1553,34 +1647,11 @@ namespace SolutionLauncher
             string remoteUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/hwid.txt";
             try
             {
-                using (var client = new HttpClient())
+                string remoteData = SafeGetStringAsync(remoteUrl);
+                foreach (var line in remoteData.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    client.Timeout = TimeSpan.FromSeconds(10);
-                    string resolvedUrl = ResolveUrl(remoteUrl);
-                    string remoteData;
-                    try
-                    {
-                        remoteData = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult();
-                    }
-                    catch
-                    {
-                        if (!useGitHubMirror)
-                        {
-                            useGitHubMirror = true;
-                            resolvedUrl = ResolveUrl(remoteUrl);
-                            remoteData = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult();
-                        }
-                        else
-                        {
-                            throw;
-                        }
-                    }
-
-                    foreach (var line in remoteData.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
-                    {
-                        string clean = line.Trim();
-                        if (!string.IsNullOrEmpty(clean)) allowedHwids.Add(clean);
-                    }
+                    string clean = line.Trim();
+                    if (!string.IsNullOrEmpty(clean)) allowedHwids.Add(clean);
                 }
             }
             catch
@@ -1598,12 +1669,12 @@ namespace SolutionLauncher
                     }
                     catch {}
                     
-                    string errorMsg = "Р’Р°СЃ РЅРµС‚Сѓ РІ Р±Р°Р·Рµ РґР°РЅРЅС‹С… С‡С‚Рѕ Р±С‹ РІР°СЃ РґРѕР±Р°РІРёР»Рё РѕС‚РїРёС€РёС‚Рµ РІ С‚РёРєРµС‚ С‡С‚Рѕ Р±С‹ РІР°СЃ РґРѕР±Р°РІРёР»Рё Рё РІСЃС‚Р°РІСЊС‚Рµ СЃРѕРѕР±С‰РµРЅРёРµ РёР· Р±СѓС„РµСЂР° РѕР±РјРµРЅР° РєРѕС‚РѕСЂРѕРµ СЏРІР»СЏРµС‚СЃСЏ РІР°С€РёРј Hwid - РєР»СЋС‡РѕРј.\n\n" +
-                                      $"Р’Р°С€ HWID-РєР»СЋС‡ (СѓР¶Рµ СЃРєРѕРїРёСЂРѕРІР°РЅ РІ Р±СѓС„РµСЂ РѕР±РјРµРЅР°):\n{hwid}";
+                    string errorMsg = "Р вЂ™Р В°РЎРѓ Р Р…Р ВµРЎвЂљРЎС“ Р Р† Р В±Р В°Р В·Р Вµ Р Т‘Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦ РЎвЂЎРЎвЂљР С• Р В±РЎвЂ№ Р Р†Р В°РЎРѓ Р Т‘Р С•Р В±Р В°Р Р†Р С‘Р В»Р С‘ Р С•РЎвЂљР С—Р С‘РЎв‚¬Р С‘РЎвЂљР Вµ Р Р† РЎвЂљР С‘Р С”Р ВµРЎвЂљ РЎвЂЎРЎвЂљР С• Р В±РЎвЂ№ Р Р†Р В°РЎРѓ Р Т‘Р С•Р В±Р В°Р Р†Р С‘Р В»Р С‘ Р С‘ Р Р†РЎРѓРЎвЂљР В°Р Р†РЎРЉРЎвЂљР Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ Р С‘Р В· Р В±РЎС“РЎвЂћР ВµРЎР‚Р В° Р С•Р В±Р СР ВµР Р…Р В° Р С”Р С•РЎвЂљР С•РЎР‚Р С•Р Вµ РЎРЏР Р†Р В»РЎРЏР ВµРЎвЂљРЎРѓРЎРЏ Р Р†Р В°РЎв‚¬Р С‘Р С Hwid - Р С”Р В»РЎР‹РЎвЂЎР С•Р С.\n\n" +
+                                      $"Р вЂ™Р В°РЎв‚¬ HWID-Р С”Р В»РЎР‹РЎвЂЎ (РЎС“Р В¶Р Вµ РЎРѓР С”Р С•Р С—Р С‘РЎР‚Р С•Р Р†Р В°Р Р… Р Р† Р В±РЎС“РЎвЂћР ВµРЎР‚ Р С•Р В±Р СР ВµР Р…Р В°):\n{hwid}";
 
                     MessageBox.Show(
                         errorMsg,
-                        "Р”РѕСЃС‚СѓРї РѕРіСЂР°РЅРёС‡РµРЅ",
+                        "Р вЂќР С•РЎРѓРЎвЂљРЎС“Р С— Р С•Р С–РЎР‚Р В°Р Р…Р С‘РЎвЂЎР ВµР Р…",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error
                     );
@@ -1626,88 +1697,53 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.11";
+                string currentVersion = "3.6.4.13";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
                 try
                 {
-                    using (var client = new HttpClient())
+                    string latestVersion = SafeGetStringAsync(remoteVersionUrl).Trim();
+
+                    if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
                     {
-                        client.Timeout = TimeSpan.FromSeconds(10);
-                        string resolvedUrl = ResolveUrl(remoteVersionUrl);
-                        string latestVersion = "";
+                        Log($"РќР°Р№РґРµРЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ Р»Р°СѓРЅС‡РµСЂР°: {latestVersion} (С‚РµРєСѓС‰Р°СЏ: {currentVersion}). РЎРєР°С‡РёРІР°РЅРёРµ...");
+
+                        string currentExePath = Process.GetCurrentProcess().MainModule?.FileName ?? "SolutionLauncher.exe";
+                        string currentDir = Path.GetDirectoryName(currentExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
+                        string tempExePath = Path.Combine(currentDir, "SolutionLauncher.new");
+
+                        // Download new exe using SafeGetByteArrayAsync which handles Github API, jsDelivr, etc.
+                        byte[] newExeBytes = null;
                         try
                         {
-                            latestVersion = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult().Trim();
+                            newExeBytes = SafeGetByteArrayAsync(remoteExeUrl);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            if (!useGitHubMirror)
-                            {
-                                useGitHubMirror = true;
-                                resolvedUrl = ResolveUrl(remoteVersionUrl);
-                                latestVersion = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult().Trim();
-                            }
-                            else
-                            {
-                                throw;
-                            }
-                        }
-
-                        if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
-                        {
-                            Log($"РќР°Р№РґРµРЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ Р»Р°СѓРЅС‡РµСЂР°: {latestVersion} (С‚РµРєСѓС‰Р°СЏ: {currentVersion}). РЎРєР°С‡РёРІР°РЅРёРµ...");
-
-                            string currentExePath = Process.GetCurrentProcess().MainModule?.FileName ?? "SolutionLauncher.exe";
-                            string currentDir = Path.GetDirectoryName(currentExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
-                            string tempExePath = Path.Combine(currentDir, "SolutionLauncher.new");
-
-                            // Download new exe
-                            byte[] newExeBytes = null;
+                            // Try alternative mirror options manually if SafeGetByteArrayAsync failed
                             var exeUrlsToTry = new List<string>
                             {
-                                ResolveUrl(remoteExeUrl),
                                 remoteExeUrl.Replace("https://raw.githubusercontent.com/", "https://raw.gitmirror.com/"),
                                 "https://ghproxy.net/" + remoteExeUrl
                             };
-
-                            Exception lastEx = null;
                             foreach (var urlOption in exeUrlsToTry)
                             {
                                 try
                                 {
-                                    newExeBytes = client.GetByteArrayAsync(urlOption).GetAwaiter().GetResult();
+                                    newExeBytes = httpClient.GetByteArrayAsync(urlOption).GetAwaiter().GetResult();
                                     break;
                                 }
-                                catch (Exception ex)
-                                {
-                                    lastEx = ex;
-                                }
+                                catch {}
                             }
-
                             if (newExeBytes == null)
                             {
-                                if (!useGitHubMirror)
-                                {
-                                    useGitHubMirror = true;
-                                    try
-                                    {
-                                        newExeBytes = client.GetByteArrayAsync(ResolveUrl(remoteExeUrl)).GetAwaiter().GetResult();
-                                    }
-                                    catch
-                                    {
-                                        throw lastEx ?? new Exception("Failed to download launcher update from all mirrors.");
-                                    }
-                                }
-                                else
-                                {
-                                    throw lastEx ?? new Exception("Failed to download launcher update from all mirrors.");
-                                }
+                                throw new Exception("Failed to download launcher update from all mirrors.", ex);
                             }
+                        }
                             File.WriteAllBytes(tempExePath, newExeBytes);
 
-                            Log("РћР±РЅРѕРІР»РµРЅРёРµ Р»Р°СѓРЅС‡РµСЂР° СЃРєР°С‡Р°РЅРѕ. РЈСЃС‚Р°РЅРѕРІРєР° Рё РїРµСЂРµР·Р°РїСѓСЃРє...");
+                            Log("Р С›Р В±Р Р…Р С•Р Р†Р В»Р ВµР Р…Р С‘Р Вµ Р В»Р В°РЎС“Р Р…РЎвЂЎР ВµРЎР‚Р В° РЎРѓР С”Р В°РЎвЂЎР В°Р Р…Р С•. Р Р€РЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р С”Р В° Р С‘ Р С—Р ВµРЎР‚Р ВµР В·Р В°Р С—РЎС“РЎРѓР С”...");
 
                             // Start self-replace batch script
                             string batchCommands = $"/c timeout /t 1 /nobreak && del /f /q \"{currentExePath}\" && move \"{tempExePath}\" \"{currentExePath}\" && start \"\" \"{currentExePath}\"";
@@ -1721,11 +1757,10 @@ namespace SolutionLauncher
 
                             Dispatcher.Invoke(() => Application.Current.Shutdown());
                         }
-                    }
                 }
                 catch (Exception ex)
                 {
-                    Log($"[РџР Р•Р”РЈРџР Р•Р–Р”Р•РќРР•] РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕРІРµСЂРёС‚СЊ РѕР±РЅРѕРІР»РµРЅРёСЏ Р»Р°СѓРЅС‡РµСЂР°: {ex.Message}");
+                    Log($"[Р СџР В Р вЂўР вЂќР Р€Р СџР В Р вЂўР вЂ“Р вЂќР вЂўР СњР ВР вЂў] Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С—РЎР‚Р С•Р Р†Р ВµРЎР‚Р С‘РЎвЂљРЎРЉ Р С•Р В±Р Р…Р С•Р Р†Р В»Р ВµР Р…Р С‘РЎРЏ Р В»Р В°РЎС“Р Р…РЎвЂЎР ВµРЎР‚Р В°: {ex.Message}");
                 }
             });
         }
