@@ -25,6 +25,33 @@ namespace SolutionLauncher
         private bool isLaunching = false;
         private string currentModVersion = "";
 
+        private string GetGitHubApiUrl(string rawUrl)
+        {
+            if (string.IsNullOrEmpty(rawUrl) || !rawUrl.StartsWith("https://raw.githubusercontent.com/"))
+            {
+                return rawUrl;
+            }
+
+            string cleanUrl = rawUrl;
+            int qIdx = cleanUrl.IndexOf('?');
+            if (qIdx >= 0)
+            {
+                cleanUrl = cleanUrl.Substring(0, qIdx);
+            }
+
+            string path = cleanUrl.Substring("https://raw.githubusercontent.com/".Length);
+            var parts = path.Split(new[] { '/' }, 4);
+            if (parts.Length >= 4)
+            {
+                string user = parts[0];
+                string repo = parts[1];
+                string branch = parts[2];
+                string filePath = parts[3];
+                return $"https://api.github.com/repos/{user}/{repo}/contents/{filePath}?ref={branch}";
+            }
+            return rawUrl;
+        }
+
         private static string ResolveUrl(string url)
         {
             if (string.IsNullOrEmpty(url)) return url;
@@ -70,6 +97,28 @@ namespace SolutionLauncher
 
         private string SafeGetStringAsync(string url)
         {
+            try
+            {
+                if (url.StartsWith("https://raw.githubusercontent.com/"))
+                {
+                    try
+                    {
+                        string apiUrl = GetGitHubApiUrl(url);
+                        var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+                        request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+                        using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                        {
+                            if (response.IsSuccessStatusCode)
+                            {
+                                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                            }
+                        }
+                    }
+                    catch {}
+                }
+            }
+            catch {}
+
             string resolved = ResolveUrl(url);
             try
             {
@@ -102,6 +151,28 @@ namespace SolutionLauncher
 
         private byte[] SafeGetByteArrayAsync(string url)
         {
+            try
+            {
+                if (url.StartsWith("https://raw.githubusercontent.com/"))
+                {
+                    try
+                    {
+                        string apiUrl = GetGitHubApiUrl(url);
+                        var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+                        request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+                        using (var response = httpClient.SendAsync(request).GetAwaiter().GetResult())
+                        {
+                            if (response.IsSuccessStatusCode)
+                            {
+                                return response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                            }
+                        }
+                    }
+                    catch {}
+                }
+            }
+            catch {}
+
             string resolved = ResolveUrl(url);
             try
             {
@@ -139,6 +210,10 @@ namespace SolutionLauncher
             try
             {
                 httpClient.Timeout = TimeSpan.FromSeconds(15);
+                if (httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+                {
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("SolutionLauncher/1.0");
+                }
             }
             catch {}
             
@@ -538,6 +613,20 @@ namespace SolutionLauncher
 
         private async Task DownloadFileWithProgress(string url, string targetPath, double startPct, double endPct)
         {
+            if (url.StartsWith("https://raw.githubusercontent.com/"))
+            {
+                try
+                {
+                    string apiUrl = GetGitHubApiUrl(url);
+                    await DownloadFileWithProgressInternal(apiUrl, targetPath, startPct, endPct);
+                    return;
+                }
+                catch
+                {
+                    // Fall back to original raw URL / mirror flow
+                }
+            }
+
             string resolved = ResolveUrl(url);
             try
             {
@@ -573,7 +662,13 @@ namespace SolutionLauncher
 
         private async Task DownloadFileWithProgressInternal(string url, string targetPath, double startPct, double endPct)
         {
-            using (var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            if (url.StartsWith("https://api.github.com/"))
+            {
+                request.Headers.Accept.ParseAdd("application/vnd.github.v3.raw");
+            }
+
+            using (var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
             {
                 response.EnsureSuccessStatusCode();
                 long? totalBytes = response.Content.Headers.ContentLength;
@@ -728,8 +823,8 @@ namespace SolutionLauncher
                 else
                 {
                     // Standalone mode: Download or update from a remote source
-                    string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/version.txt?t=" + DateTime.UtcNow.Ticks;
-                    string remoteModUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionVisual.jar?t=" + DateTime.UtcNow.Ticks;
+                    string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/version.txt";
+                    string remoteModUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionVisual.jar";
                     
                     bool needDownload = false;
                     string latestVersion = "";
@@ -1453,8 +1548,8 @@ namespace SolutionLauncher
 
             var allowedHwids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             
-            // Fetch remote HWID database (with cache buster)
-            string remoteUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/hwid.txt?t=" + DateTime.UtcNow.Ticks;
+            // Fetch remote HWID database
+            string remoteUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/hwid.txt";
             try
             {
                 using (var client = new HttpClient())
@@ -1522,9 +1617,9 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.6";
-                string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt?t=" + DateTime.UtcNow.Ticks;
-                string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe?t=" + DateTime.UtcNow.Ticks;
+                string currentVersion = "3.6.4.7";
+                string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
+                string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
                 try
                 {
