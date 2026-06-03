@@ -20,7 +20,7 @@ public class ConfigScreen extends MenuScreen {
     private final List<ConfigComponent> configComponents = new ArrayList<>();
     private final ScrollUtility scroll = new ScrollUtility();
     
-    private boolean isCreatingNew = false;
+    public boolean isCreatingNew = false;
     private String newConfigName = "";
     
     private final Animation createPanelAnimation = new Animation(Easing.EASE_OUT_CUBIC, 300);
@@ -49,6 +49,8 @@ public class ConfigScreen extends MenuScreen {
         // Анимация панели создания
         createPanelAnimation.run(isCreatingNew ? 1 : 0);
         
+        float guiAlpha = getClickGUI().getGuiAlpha();
+        
         // Большой отступ слева чтобы не вылезать на sidebar
         float leftPadding = 50;
         
@@ -61,8 +63,8 @@ public class ConfigScreen extends MenuScreen {
         ShapeProperties.create(context.getMatrices(), x + leftPadding, containerY, width - leftPadding - 10, containerHeight)
                 .round(10)
                 .thickness(1)
-                .outlineColor(TempColor.getModuleBorder().getRGB())
-                .color(TempColor.getModuleBackground().getRGB())
+                .outlineColor(TempColor.getModuleBorder().alpha(guiAlpha).getRGB())
+                .color(TempColor.getModuleBackground().alpha(guiAlpha).getRGB())
                 .build();
         
         // Две кнопки управления внутри контейнера
@@ -86,18 +88,21 @@ public class ConfigScreen extends MenuScreen {
         double createOutlineAlpha = createHovered ? (isLightCfg ? 0.8 : 0.5) : (isLightCfg ? 0.5 : 0.3);
         double resetOutlineAlpha  = resetHovered  ? (isLightCfg ? 0.8 : 0.5) : (isLightCfg ? 0.5 : 0.3);
 
+        createOutlineAlpha *= guiAlpha;
+        resetOutlineAlpha *= guiAlpha;
+
         // Create button
         blur.render(ShapeProperties.create(context.getMatrices(), createBtnX - 1, btnY - 1, btnWidth + 2, btnHeight + 2)
                 .round(6)
                 .softness(1.5f)
                 .thickness(2.5f)
                 .outlineColor(TempColor.getClientColor().alpha(createOutlineAlpha).getRGB())
-                .color(TempColor.getModuleBackground().getRGB())
+                .color(TempColor.getModuleBackground().alpha(guiAlpha).getRGB())
                 .build());
         
         Fonts.DEFAULT.get(13).drawCenteredString(context.getMatrices(), "Create",
                 createBtnX + btnWidth / 2, btnY + btnHeight / 2 - 3,
-                TempColor.getTextPrimary().getRGB());
+                getFadeColor(TempColor.getTextPrimary().getRGB(), guiAlpha));
         
         // Reset button
         blur.render(ShapeProperties.create(context.getMatrices(), resetBtnX - 1, btnY - 1, btnWidth + 2, btnHeight + 2)
@@ -105,17 +110,17 @@ public class ConfigScreen extends MenuScreen {
                 .softness(1.5f)
                 .thickness(2.5f)
                 .outlineColor(new farvix.solution.api.util.color.FixColor(255, 100, 100).alpha(resetOutlineAlpha).getRGB())
-                .color(TempColor.getModuleBackground().getRGB())
+                .color(TempColor.getModuleBackground().alpha(guiAlpha).getRGB())
                 .build());
         
         Fonts.DEFAULT.get(13).drawCenteredString(context.getMatrices(), "Reset",
                 resetBtnX + btnWidth / 2, btnY + btnHeight / 2 - 3,
-                TempColor.getTextPrimary().getRGB());
+                getFadeColor(TempColor.getTextPrimary().getRGB(), guiAlpha));
         
         // Разделитель
         float separatorY = containerY + containerHeight + 2;
         ShapeProperties.create(context.getMatrices(), x + leftPadding, separatorY, width - leftPadding - 10, 1)
-                .color(TempColor.getClientColor().alpha(0.2).getRGB())
+                .color(TempColor.getClientColor().alpha(0.2 * guiAlpha).getRGB())
                 .build();
         
         // Заголовок списка убран
@@ -128,7 +133,7 @@ public class ConfigScreen extends MenuScreen {
         if (configComponents.isEmpty()) {
             // Показываем сообщение если нет конфигов
             Fonts.DEFAULT.get(14).drawCenteredString(context.getMatrices(), "No configs yet. Create one!", 
-                    x + leftPadding + (width - leftPadding - 10) / 2, listY + 50, 0x80FFFFFF);
+                    x + leftPadding + (width - leftPadding - 10) / 2, listY + 50, getFadeColor(0x80FFFFFF, guiAlpha));
         } else {
             // Вычисляем максимальную прокрутку
             float totalHeight = configComponents.size() * (itemHeight + spacing);
@@ -171,6 +176,7 @@ public class ConfigScreen extends MenuScreen {
     
     private void renderCreatePanel(DrawContext context, int mouseX, int mouseY) {
         InterfaceScreen gui = getClickGUI();
+        float guiAlpha = gui.getGuiAlpha();
         
         float panelWidth = 125;
         float panelHeight = gui.getHeight();
@@ -182,17 +188,17 @@ public class ConfigScreen extends MenuScreen {
                 .round(10)
                 .softness(1.5f)
                 .thickness(2.5f)
-                .outlineColor(TempColor.getClientColor().alpha(0.3).getRGB())
-                .color(TempColor.getModuleBackground().getRGB())
+                .outlineColor(TempColor.getClientColor().alpha(0.3 * guiAlpha).getRGB())
+                .color(TempColor.getModuleBackground().alpha(guiAlpha).getRGB())
                 .build());
         
         // Заголовок
         Fonts.DEFAULT.get(16).drawCenteredString(context.getMatrices(), "Create Config", 
-                panelX + panelWidth / 2, panelY + 15, TempColor.getClientColor().getRGB());
+                panelX + panelWidth / 2, panelY + 15, TempColor.getClientColor().alpha(guiAlpha).getRGB());
         
         // Подзаголовок
         Fonts.DEFAULT.get(11).drawCenteredString(context.getMatrices(), "Enter config name", 
-                panelX + panelWidth / 2, panelY + 35, TempColor.getTextSecondary().getRGB());
+                panelX + panelWidth / 2, panelY + 35, TempColor.getTextSecondary().alpha(guiAlpha).getRGB());
         
         // Поле ввода
         float inputX = panelX + 10;
@@ -204,12 +210,11 @@ public class ConfigScreen extends MenuScreen {
                 .round(8)
                 .softness(1.5f)
                 .thickness(2.5f)
-                .outlineColor(TempColor.getClientColor().alpha(0.2).getRGB())
-                .color(TempColor.getGuiBackground().alpha(0.5).getRGB())
+                .outlineColor(TempColor.getClientColor().alpha(0.2 * guiAlpha).getRGB())
+                .color(TempColor.getGuiBackground().alpha(0.5 * guiAlpha).getRGB())
                 .build());
         
         String displayText = newConfigName.isEmpty() ? "my_config" : newConfigName;
-        int textColor = newConfigName.isEmpty() ? 0x60FFFFFF : -1;
         
         // Добавляем мигающий курсор если панель активна
         String displayWithCursor = displayText;
@@ -219,7 +224,7 @@ public class ConfigScreen extends MenuScreen {
         
         Fonts.DEFAULT.get(13).drawString(context.getMatrices(), displayWithCursor, 
                 inputX + 10, inputY + inputH / 2 - 4,
-                newConfigName.isEmpty() ? TempColor.getTextSecondary().getRGB() : TempColor.getTextPrimary().getRGB());
+                newConfigName.isEmpty() ? TempColor.getTextSecondary().alpha(guiAlpha).getRGB() : TempColor.getTextPrimary().alpha(guiAlpha).getRGB());
         
         // Кнопки
         float btnY = panelY + 100;
@@ -240,32 +245,32 @@ public class ConfigScreen extends MenuScreen {
                 .round(6)
                 .softness(1.5f)
                 .thickness(2.5f)
-                .outlineColor(TempColor.getClientColor().alpha(createHovered ? 0.5 : 0.3).getRGB())
-                .color(TempColor.getModuleBackground().getRGB())
+                .outlineColor(TempColor.getClientColor().alpha((createHovered ? 0.5 : 0.3) * guiAlpha).getRGB())
+                .color(TempColor.getModuleBackground().alpha(guiAlpha).getRGB())
                 .build());
         
         Fonts.DEFAULT.get(13).drawCenteredString(context.getMatrices(), "Create", 
-                createX + btnW / 2, btnY + btnH / 2 - 3, TempColor.getTextPrimary().getRGB());
+                createX + btnW / 2, btnY + btnH / 2 - 3, getFadeColor(TempColor.getTextPrimary().getRGB(), guiAlpha));
         
         // Clean button
         blur.render(ShapeProperties.create(context.getMatrices(), createX - 1, cleanY - 1, btnW + 2, btnH + 2)
                 .round(6)
                 .softness(1.5f)
                 .thickness(2.5f)
-                .outlineColor(TempColor.getClientColor().alpha(cleanHovered ? 0.5 : 0.3).getRGB())
-                .color(TempColor.getModuleBackground().getRGB())
+                .outlineColor(TempColor.getClientColor().alpha((cleanHovered ? 0.5 : 0.3) * guiAlpha).getRGB())
+                .color(TempColor.getModuleBackground().alpha(guiAlpha).getRGB())
                 .build());
         
         Fonts.DEFAULT.get(13).drawCenteredString(context.getMatrices(), "Clean", 
-                createX + btnW / 2, cleanY + btnH / 2 - 3, TempColor.getTextPrimary().getRGB());
+                createX + btnW / 2, cleanY + btnH / 2 - 3, getFadeColor(TempColor.getTextPrimary().getRGB(), guiAlpha));
         
         // Cfg Dir button
         blur.render(ShapeProperties.create(context.getMatrices(), createX - 1, cfgDirY - 1, btnW + 2, btnH + 2)
                 .round(6)
                 .softness(1.5f)
                 .thickness(2.5f)
-                .outlineColor(TempColor.getClientColor().alpha(cfgDirHovered ? 0.5 : 0.3).getRGB())
-                .color(TempColor.getModuleBackground().getRGB())
+                .outlineColor(TempColor.getClientColor().alpha((cfgDirHovered ? 0.5 : 0.3) * guiAlpha).getRGB())
+                .color(TempColor.getModuleBackground().alpha(guiAlpha).getRGB())
                 .build());
         
         Fonts.DEFAULT.get(13).drawCenteredString(context.getMatrices(), "Cfg Dir", 
@@ -415,12 +420,11 @@ public class ConfigScreen extends MenuScreen {
             // Create button - СОЗДАЕТ конфиг
             if (mouseX >= createX && mouseX <= createX + btnW && 
                 mouseY >= btnY && mouseY <= btnY + btnH) {
-                if (!newConfigName.isEmpty()) {
-                    Client.getInstance().getConfigManager().saveConfig(newConfigName);
-                    rebuildConfigs();
-                    isCreatingNew = false;
-                    newConfigName = "";
-                }
+                String nameToSave = newConfigName.isEmpty() ? "my_config" : newConfigName;
+                Client.getInstance().getConfigManager().saveConfig(nameToSave);
+                rebuildConfigs();
+                isCreatingNew = false;
+                newConfigName = "";
                 return;
             }
             
@@ -506,12 +510,11 @@ public class ConfigScreen extends MenuScreen {
                 isCreatingNew = false;
                 newConfigName = "";
             } else if (keyCode == 257 || keyCode == 335) { // ENTER - создать конфиг
-                if (!newConfigName.isEmpty()) {
-                    Client.getInstance().getConfigManager().saveConfig(newConfigName);
-                    rebuildConfigs();
-                    isCreatingNew = false;
-                    newConfigName = "";
-                }
+                String nameToSave = newConfigName.isEmpty() ? "my_config" : newConfigName;
+                Client.getInstance().getConfigManager().saveConfig(nameToSave);
+                rebuildConfigs();
+                isCreatingNew = false;
+                newConfigName = "";
             } else if (keyCode == 259) { // BACKSPACE - удалить символ
                 if (!newConfigName.isEmpty()) {
                     newConfigName = newConfigName.substring(0, newConfigName.length() - 1);
@@ -557,7 +560,16 @@ public class ConfigScreen extends MenuScreen {
         rebuildConfigs();
     }
     
-    private InterfaceScreen getClickGUI() {
+    public InterfaceScreen getClickGUI() {
         return (InterfaceScreen) mc.currentScreen;
+    }
+    
+    public int getFadeColor(int color, float guiAlpha) {
+        int alpha = (color >> 24) & 0xFF;
+        int red = (color >> 16) & 0xFF;
+        int green = (color >> 8) & 0xFF;
+        int blue = color & 0xFF;
+        int newAlpha = (int)(alpha * guiAlpha);
+        return (newAlpha << 24) | (red << 16) | (green << 8) | blue;
     }
 }

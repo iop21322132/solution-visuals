@@ -87,7 +87,7 @@ public class InterfaceScreen extends Screen implements QuickImports {
     }
     
     public float getGuiScaleFactor() {
-        return 1.0f;
+        return 1.0f / 1.5f;
     }
     
     @Override
@@ -510,6 +510,11 @@ public class InterfaceScreen extends Screen implements QuickImports {
         // Проверяем фокус в WaypointScreen
         if (currentScreen instanceof farvix.solution.api.ui.clickgui.impl.waypoint.WaypointScreen ws) {
             if (ws.isFocused()) return true;
+        }
+
+        // Проверяем фокус при создании конфига
+        if (currentScreen instanceof farvix.solution.api.ui.clickgui.impl.config.ConfigScreen cs) {
+            if (cs.isCreatingNew) return true;
         }
         
         for (ModuleComponent component : moduleList) {

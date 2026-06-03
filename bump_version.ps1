@@ -59,5 +59,5 @@ if (Test-Path $launcherCsFile) {
 # launcher\MainWindow.xaml
 if (Test-Path $launcherXamlFile) {
     $xamlContent = Get-Content $launcherXamlFile
-    $xamlContent -replace 'Title="Solution Launcher .*?"', "Title=`"Solution Launcher $newVersion`"" -replace 'Text="Solution Launcher .*?"', "Text=`"Solution Launcher $newVersion`"" | Set-Content $xamlContent -Encoding utf8
+    $xamlContent -replace 'Title="Solution Launcher .*?"', "Title=`"Solution Launcher $newVersion`"" -replace 'Text="Solution Launcher .*?"', "Text=`"Solution Launcher $newVersion`"" | Set-Content $launcherXamlFile -Encoding utf8
 }

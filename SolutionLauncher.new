@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SolutionVisual — мод для Minecraft</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <!-- Фоновый canvas для частиц и световых эффектов -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Преломляющий световой слой -->
+    <div class="refraction-layer"></div>
+
+    <!-- Основной контент -->
+    <main class="content">
+        <!-- Hero секция -->
+        <section class="hero">
+            <div class="hero-glow"></div>
+            <h1 class="hero-title">
+                <span class="title-line">SolutionVisual</span>
+                <span class="title-sub">Преобрази свой Minecraft</span>
+            </h1>
+            <p class="hero-desc">
+                Мод, который меняет визуальное восприятие игры через физику света,
+                преломление и атмосферные эффекты. Каждый мир заиграет новыми красками.
+            </p>
+        </section>
+
+        <!-- О моде -->
+        <section class="about">
+            <div class="about-card">
+                <h2>Что такое SolutionVisual?</h2>
+                <p>
+                    SolutionVisual — это инновационный мод для Minecraft Fabric 1.21.4,
+                    который добавляет в игру реалистичное преломление света, объёмное
+                    освещение, мягкие тени и кинематографические эффекты. Мод работает
+                    плавно и оптимизирован для современных видеокарт.
+                </p>
+            </div>
+        </section>
+
+        <!-- Почему этот мод хорош — таблички -->
+        <section class="reasons">
+            <h2>Почему SolutionVisual?</h2>
+            <div class="reasons-grid">
+                <div class="reason-card" data-delay="0">
+                    <div class="card-glow"></div>
+                    <div class="card-icon">✦</div>
+                    <h3>Реалистичный свет</h3>
+                    <p>Физически корректное преломление и рассеивание света через блоки и жидкости</p>
+                </div>
+                <div class="reason-card" data-delay="150">
+                    <div class="card-glow"></div>
+                    <div class="card-icon">◈</div>
+                    <h3>Красивые эффекты</h3>
+                    <p>Объёмный туман, блики на воде, свечение в темноте — всё работает из коробки</p>
+                </div>
+                <div class="reason-card" data-delay="300">
+                    <div class="card-glow"></div>
+                    <div class="card-icon">♢</div>
+                    <h3>Оптимизация</h3>
+                    <p>Плавная работа даже на средних ПК благодаря умному LOD и настройкам</p>
+                </div>
+                <div class="reason-card" data-delay="450">
+                    <div class="card-glow"></div>
+                    <div class="card-icon">◇</div>
+                    <h3>Совместимость</h3>
+                    <p>Работает с популярными шейдерпаками и большинством модов Fabric 1.21.4</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Галерея / дополнительное описание -->
+        <section class="features">
+            <h2>Возможности мода</h2>
+            <div class="features-list">
+                <div class="feature-item">
+                    <span class="feature-bullet">01</span>
+                    <div>
+                        <h3>Преломление света</h3>
+                        <p>Свет меняет направление при прохождении через блоки — эффект линзы и дисперсия</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-bullet">02</span>
+                    <div>
+                        <h3>Динамические тени</h3>
+                        <p>Мягкие тени от блоков и существ с учётом времени суток</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-bullet">03</span>
+                    <div>
+                        <h3>Атмосферные эффекты</h3>
+                        <p>Волны частиц, световые столбы, сумеречное освещение</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-bullet">04</span>
+                    <div>
+                        <h3>Гибкая настройка</h3>
+                        <p>Каждый эффект можно включить/отключить через конфиг или меню мода</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Секция скачивания -->
+        <section class="download">
+            <div class="download-glow"></div>
+            <h2>Готов попробовать?</h2>
+            <p>Скачай SolutionVisual 3.6.3 для Fabric 1.21.4 и открой новый взгляд на Minecraft</p>
+            <a href="/SolutionVisual 3.6.3-fabric-1.21.4.jar" class="download-btn" download>
+                <span class="btn-icon">↓</span>
+                <span class="btn-text">Скачать мод</span>
+                <span class="btn-version">v3.6.3 · Fabric 1.21.4</span>
+            </a>
+        </section>
+
+        <!-- Футер -->
+        <footer class="footer">
+            <p>&copy; 2025 SolutionVisual. Все права защищены.</p>
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

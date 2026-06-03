@@ -71,7 +71,7 @@ powershell -Command "Invoke-WebRequest -Uri 'https://purge.jsdelivr.net/gh/iop21
 powershell -Command "Invoke-WebRequest -Uri 'https://purge.jsdelivr.net/gh/iop21322132/solution-visuals@main/launcher_version.txt' -UseBasicParsing | Out-Null"
 
 echo ==============================================
-echo    ОБНОВЛЕНИЕ УСПЕШНО ОПУБЛИКОВАНО НА GITHUB!
+echo    ОБНОВЛЕНИЕ УСПЕШНО ОПУБЛИКОВАНО!
 echo    Версия %NEW_VERSION% теперь активна для всех игроков.
 echo ==============================================
 pause
