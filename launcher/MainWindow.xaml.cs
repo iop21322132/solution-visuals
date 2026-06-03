@@ -260,9 +260,43 @@ namespace SolutionLauncher
             }
         }
 
+        private bool IsFileLocked(string filePath)
+        {
+            if (!File.Exists(filePath)) return false;
+            try
+            {
+                using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                {
+                    // File is not locked
+                }
+                return false;
+            }
+            catch (IOException)
+            {
+                return true;
+            }
+        }
+
         private void StartLaunchPipeline(string nickname, int ramGb)
         {
             Log("Начало процесса подготовки игры...");
+
+            string gameDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".solutionvisuals");
+            string targetModJar = Path.Combine(gameDir, "mods", "SolutionVisual.jar");
+            if (IsFileLocked(targetModJar))
+            {
+                Log("[ОШИБКА] Обнаружена запущенная копия игры (файл SolutionVisual.jar заблокирован).");
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(
+                        "Игра уже запущена или её процесс завис в фоновом режиме.\n\nПожалуйста, закройте запущенную копию Minecraft перед повторным запуском.",
+                        "Игра уже запущена",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning
+                    );
+                });
+                return;
+            }
 
             string currentDir = AppDomain.CurrentDomain.BaseDirectory;
             string? rootDir = FindProjectRoot(currentDir);
@@ -285,7 +319,7 @@ namespace SolutionLauncher
             }
 
             SetStatus("Подготовка директории игры...", 15);
-            string gameDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".solutionvisuals");
+            gameDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".solutionvisuals");
             Directory.CreateDirectory(gameDir);
             Directory.CreateDirectory(Path.Combine(gameDir, "versions"));
             Directory.CreateDirectory(Path.Combine(gameDir, "libraries"));
@@ -973,9 +1007,29 @@ namespace SolutionLauncher
                     Log("[ОШИБКА] Не удалось запустить процесс игры.");
                     return;
                 }
-
-                gameProcess.OutputDataReceived += (s, e) => { if (e.Data != null) Log($"[Minecraft] {e.Data}"); };
-                gameProcess.ErrorDataReceived += (s, e) => { if (e.Data != null) Log($"[Minecraft ОШИБКА] {e.Data}"); };
+                bool memoryErrorDetected = false;
+                gameProcess.OutputDataReceived += (s, e) => 
+                { 
+                    if (e.Data != null) 
+                    {
+                        Log($"[Minecraft] {e.Data}");
+                        if (e.Data.Contains("insufficient memory") || e.Data.Contains("commit_memory") || e.Data.Contains("errno=1455"))
+                        {
+                            memoryErrorDetected = true;
+                        }
+                    }
+                };
+                gameProcess.ErrorDataReceived += (s, e) => 
+                { 
+                    if (e.Data != null) 
+                    {
+                        Log($"[Minecraft ОШИБКА] {e.Data}");
+                        if (e.Data.Contains("insufficient memory") || e.Data.Contains("commit_memory") || e.Data.Contains("errno=1455") || e.Data.Contains("Файл подкачки слишком мал"))
+                        {
+                            memoryErrorDetected = true;
+                        }
+                    }
+                };
 
                 gameProcess.BeginOutputReadLine();
                 gameProcess.BeginErrorReadLine();
@@ -989,6 +1043,21 @@ namespace SolutionLauncher
                     gameProcess.WaitForExit();
                     Log($"[Solution Launcher] Процесс игры завершился с кодом {gameProcess.ExitCode}");
                     SetStatus("Готов к запуску", 0);
+                    if (memoryErrorDetected)
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show(
+                                "Не удалось запустить игру из-за нехватки виртуальной памяти (файла подкачки) на вашем компьютере.\n\n" +
+                                "Решения:\n" +
+                                "1. Откройте Настройки в лаунчере и уменьшите количество выделяемой оперативной памяти (RAM) до 2 ГБ или 3 ГБ.\n" +
+                                "2. Увеличьте размер файла подкачки в настройках Windows (или включите его, если он отключен).",
+                                "Недостаточно виртуальной памяти",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning
+                            );
+                        });
+                    }
                     try
                     {
                         File.Delete(argsFilePath);
@@ -1236,7 +1305,7 @@ namespace SolutionLauncher
                     if (config != null)
                     {
                         NicknameInput.Text = config.Nickname ?? "Player";
-                        RamSlider.Value = config.RamGb > 0 ? config.RamGb : 4;
+                        RamSlider.Value = config.RamGb > 0 ? config.RamGb : GetDefaultRamGb();
                         RamValueText.Text = $"{(int)RamSlider.Value} ГБ";
                         currentModVersion = config.ModVersion ?? "";
                         return;
@@ -1248,8 +1317,9 @@ namespace SolutionLauncher
                 Log($"[ПРЕДУПРЕЖДЕНИЕ] Не удалось загрузить настройки: {ex.Message}");
             }
             NicknameInput.Text = "Player";
-            RamSlider.Value = 4;
-            RamValueText.Text = "4 ГБ";
+            int defaultRam = GetDefaultRamGb();
+            RamSlider.Value = defaultRam;
+            RamValueText.Text = $"{defaultRam} ГБ";
             currentModVersion = "";
         }
 
@@ -1311,6 +1381,15 @@ namespace SolutionLauncher
             }
             catch {}
             return 16; // default fallback
+        }
+
+        private int GetDefaultRamGb()
+        {
+            int totalRam = GetTotalRamGb();
+            if (totalRam <= 4) return 2;
+            if (totalRam <= 8) return 3;
+            if (totalRam <= 16) return 4;
+            return 6;
         }
 
         private void CheckHWID()
@@ -1400,7 +1479,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.2";
+                string currentVersion = "3.6.4.3";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
