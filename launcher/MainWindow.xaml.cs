@@ -20,12 +20,111 @@ namespace SolutionLauncher
     public partial class MainWindow : Window
     {
         private static readonly HttpClient httpClient = new HttpClient();
+        private static bool useGitHubMirror = false;
+        private static bool useMojangMirror = false;
         private bool isLaunching = false;
         private string currentModVersion = "";
+
+        private static string ResolveUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return url;
+
+            string resolved = url;
+            if (useGitHubMirror && resolved.StartsWith("https://raw.githubusercontent.com/"))
+            {
+                resolved = resolved.Replace("https://raw.githubusercontent.com/", "https://raw.gitmirror.com/");
+            }
+            if (useMojangMirror)
+            {
+                if (resolved.StartsWith("https://launchermeta.mojang.com/"))
+                    resolved = resolved.Replace("https://launchermeta.mojang.com/", "https://bmclapi2.bangbang93.com/");
+                else if (resolved.StartsWith("https://launcher.mojang.com/"))
+                    resolved = resolved.Replace("https://launcher.mojang.com/", "https://bmclapi2.bangbang93.com/");
+                else if (resolved.StartsWith("https://piston-meta.mojang.com/"))
+                    resolved = resolved.Replace("https://piston-meta.mojang.com/", "https://bmclapi2.bangbang93.com/");
+                else if (resolved.StartsWith("https://piston-data.mojang.com/"))
+                    resolved = resolved.Replace("https://piston-data.mojang.com/", "https://bmclapi2.bangbang93.com/");
+                else if (resolved.StartsWith("https://meta.fabricmc.net/"))
+                    resolved = resolved.Replace("https://meta.fabricmc.net/", "https://bmclapi2.bangbang93.com/fabric-meta/");
+                else if (resolved.StartsWith("https://maven.fabricmc.net/"))
+                    resolved = resolved.Replace("https://maven.fabricmc.net/", "https://bmclapi2.bangbang93.com/maven/");
+            }
+            return resolved;
+        }
+
+        private string SafeGetStringAsync(string url)
+        {
+            string resolved = ResolveUrl(url);
+            try
+            {
+                return httpClient.GetStringAsync(resolved).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                bool activatedMirror = false;
+                if (url.StartsWith("https://raw.githubusercontent.com/") && !useGitHubMirror)
+                {
+                    useGitHubMirror = true;
+                    activatedMirror = true;
+                    Log($"[СЕТЬ] Ошибка подключения к GitHub ({ex.Message}). Переключение на зеркало...");
+                }
+                else if ((url.Contains("mojang.com") || url.Contains("fabricmc.net")) && !useMojangMirror)
+                {
+                    useMojangMirror = true;
+                    activatedMirror = true;
+                    Log($"[СЕТЬ] Ошибка подключения к Mojang/Fabric ({ex.Message}). Переключение на зеркало...");
+                }
+
+                if (activatedMirror)
+                {
+                    string retriedUrl = ResolveUrl(url);
+                    return httpClient.GetStringAsync(retriedUrl).GetAwaiter().GetResult();
+                }
+                throw;
+            }
+        }
+
+        private byte[] SafeGetByteArrayAsync(string url)
+        {
+            string resolved = ResolveUrl(url);
+            try
+            {
+                return httpClient.GetByteArrayAsync(resolved).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                bool activatedMirror = false;
+                if (url.StartsWith("https://raw.githubusercontent.com/") && !useGitHubMirror)
+                {
+                    useGitHubMirror = true;
+                    activatedMirror = true;
+                    Log($"[СЕТЬ] Ошибка подключения к GitHub ({ex.Message}). Переключение на зеркало...");
+                }
+                else if ((url.Contains("mojang.com") || url.Contains("fabricmc.net")) && !useMojangMirror)
+                {
+                    useMojangMirror = true;
+                    activatedMirror = true;
+                    Log($"[СЕТЬ] Ошибка подключения к Mojang/Fabric ({ex.Message}). Переключение на зеркало...");
+                }
+
+                if (activatedMirror)
+                {
+                    string retriedUrl = ResolveUrl(url);
+                    return httpClient.GetByteArrayAsync(retriedUrl).GetAwaiter().GetResult();
+                }
+                throw;
+            }
+        }
+
 
         public MainWindow()
         {
             InitializeComponent();
+            try
+            {
+                httpClient.Timeout = TimeSpan.FromSeconds(15);
+            }
+            catch {}
             
             // Set Window Icon safely
             try
@@ -235,7 +334,7 @@ namespace SolutionLauncher
             {
                 Log("Запрос манифеста версий Mojang...");
                 string manifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
-                string manifestJson = httpClient.GetStringAsync(manifestUrl).GetAwaiter().GetResult();
+                string manifestJson = SafeGetStringAsync(manifestUrl);
                 
                 using var manifestDoc = JsonDocument.Parse(manifestJson);
                 var versions = manifestDoc.RootElement.GetProperty("versions");
@@ -257,7 +356,7 @@ namespace SolutionLauncher
                 }
 
                 Log("Загрузка профиля версии 1.21.4...");
-                string versionJson = httpClient.GetStringAsync(versionUrl).GetAwaiter().GetResult();
+                string versionJson = SafeGetStringAsync(versionUrl);
                 
                 string versionDir = Path.Combine(gameDir, "versions", "1.21.4");
                 Directory.CreateDirectory(versionDir);
@@ -309,7 +408,8 @@ namespace SolutionLauncher
                         else
                         {
                             Log($"Загрузка библиотеки ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
-                            httpClient.GetByteArrayAsync(url).ContinueWith(t => File.WriteAllBytes(targetPath, t.Result)).GetAwaiter().GetResult();
+                            byte[] libBytes = SafeGetByteArrayAsync(url);
+                            File.WriteAllBytes(targetPath, libBytes);
                         }
                     }
 
@@ -327,7 +427,7 @@ namespace SolutionLauncher
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(assetIndexTarget));
                     Log($"Загрузка индекса ресурсов: {assetIndexId}.json");
-                    string assetsJson = httpClient.GetStringAsync(assetIndexUrl).GetAwaiter().GetResult();
+                    string assetsJson = SafeGetStringAsync(assetIndexUrl);
                     File.WriteAllText(assetIndexTarget, assetsJson);
                 }
 
@@ -348,6 +448,41 @@ namespace SolutionLauncher
         }
 
         private async Task DownloadFileWithProgress(string url, string targetPath, double startPct, double endPct)
+        {
+            string resolved = ResolveUrl(url);
+            try
+            {
+                await DownloadFileWithProgressInternal(resolved, targetPath, startPct, endPct);
+            }
+            catch (Exception ex)
+            {
+                bool activatedMirror = false;
+                if (url.StartsWith("https://raw.githubusercontent.com/") && !useGitHubMirror)
+                {
+                    useGitHubMirror = true;
+                    activatedMirror = true;
+                    Log($"[СЕТЬ] Ошибка скачивания с GitHub ({ex.Message}). Переключение на зеркало...");
+                }
+                else if ((url.Contains("mojang.com") || url.Contains("fabricmc.net")) && !useMojangMirror)
+                {
+                    useMojangMirror = true;
+                    activatedMirror = true;
+                    Log($"[СЕТЬ] Ошибка скачивания с Mojang/Fabric ({ex.Message}). Переключение на зеркало...");
+                }
+
+                if (activatedMirror)
+                {
+                    string retriedUrl = ResolveUrl(url);
+                    await DownloadFileWithProgressInternal(retriedUrl, targetPath, startPct, endPct);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        private async Task DownloadFileWithProgressInternal(string url, string targetPath, double startPct, double endPct)
         {
             using (var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
             {
@@ -383,7 +518,7 @@ namespace SolutionLauncher
             {
                 Log("Запрос метаданных профиля Fabric Loader...");
                 string fabricProfileUrl = "https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.16.14/profile/json";
-                string profileJson = httpClient.GetStringAsync(fabricProfileUrl).GetAwaiter().GetResult();
+                string profileJson = SafeGetStringAsync(fabricProfileUrl);
 
                 string fabricVersionDir = Path.Combine(gameDir, "versions", "fabric-loader-0.16.14-1.21.4");
                 Directory.CreateDirectory(fabricVersionDir);
@@ -419,7 +554,8 @@ namespace SolutionLauncher
                         else
                         {
                             Log($"Загрузка Fabric либы ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
-                            httpClient.GetByteArrayAsync(downloadUrl).ContinueWith(t => File.WriteAllBytes(targetPath, t.Result)).GetAwaiter().GetResult();
+                            byte[] libBytes = SafeGetByteArrayAsync(downloadUrl);
+                            File.WriteAllBytes(targetPath, libBytes);
                         }
                     }
 
@@ -512,7 +648,7 @@ namespace SolutionLauncher
                     try
                     {
                         Log("Проверка обновлений мода SolutionVisual...");
-                        latestVersion = httpClient.GetStringAsync(remoteVersionUrl).GetAwaiter().GetResult().Trim();
+                        latestVersion = SafeGetStringAsync(remoteVersionUrl).Trim();
                         if (string.IsNullOrEmpty(currentModVersion) || currentModVersion != latestVersion || !File.Exists(targetModJar))
                         {
                             needDownload = true;
@@ -1167,7 +1303,26 @@ namespace SolutionLauncher
                 using (var client = new HttpClient())
                 {
                     client.Timeout = TimeSpan.FromSeconds(10);
-                    string remoteData = client.GetStringAsync(remoteUrl).GetAwaiter().GetResult();
+                    string resolvedUrl = ResolveUrl(remoteUrl);
+                    string remoteData;
+                    try
+                    {
+                        remoteData = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult();
+                    }
+                    catch
+                    {
+                        if (!useGitHubMirror)
+                        {
+                            useGitHubMirror = true;
+                            resolvedUrl = ResolveUrl(remoteUrl);
+                            remoteData = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult();
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+
                     foreach (var line in remoteData.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
                     {
                         string clean = line.Trim();
@@ -1206,7 +1361,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.3";
+                string currentVersion = "3.6.4";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
@@ -1215,7 +1370,26 @@ namespace SolutionLauncher
                     using (var client = new HttpClient())
                     {
                         client.Timeout = TimeSpan.FromSeconds(10);
-                        string latestVersion = client.GetStringAsync(remoteVersionUrl).GetAwaiter().GetResult().Trim();
+                        string resolvedUrl = ResolveUrl(remoteVersionUrl);
+                        string latestVersion = "";
+                        try
+                        {
+                            latestVersion = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult().Trim();
+                        }
+                        catch
+                        {
+                            if (!useGitHubMirror)
+                            {
+                                useGitHubMirror = true;
+                                resolvedUrl = ResolveUrl(remoteVersionUrl);
+                                latestVersion = client.GetStringAsync(resolvedUrl).GetAwaiter().GetResult().Trim();
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+
                         if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
                         {
                             Log($"Найдено обновление лаунчера: {latestVersion} (текущая: {currentVersion}). Скачивание...");
@@ -1225,7 +1399,25 @@ namespace SolutionLauncher
                             string tempExePath = Path.Combine(currentDir, "SolutionLauncher.new");
 
                             // Download new exe
-                            byte[] newExeBytes = client.GetByteArrayAsync(remoteExeUrl).GetAwaiter().GetResult();
+                            string resolvedExeUrl = ResolveUrl(remoteExeUrl);
+                            byte[] newExeBytes;
+                            try
+                            {
+                                newExeBytes = client.GetByteArrayAsync(resolvedExeUrl).GetAwaiter().GetResult();
+                            }
+                            catch
+                            {
+                                if (!useGitHubMirror)
+                                {
+                                    useGitHubMirror = true;
+                                    resolvedExeUrl = ResolveUrl(remoteExeUrl);
+                                    newExeBytes = client.GetByteArrayAsync(resolvedExeUrl).GetAwaiter().GetResult();
+                                }
+                                else
+                                {
+                                    throw;
+                                }
+                            }
                             File.WriteAllBytes(tempExePath, newExeBytes);
 
                             Log("Обновление лаунчера скачано. Установка и перезапуск...");
