@@ -150,9 +150,13 @@ namespace SolutionLauncher
             }
             catch {}
             
-            // Set dynamic maximum for RAM slider based on physical memory
+            // Set dynamic maximum for RAM slider based on physical memory to leave room for Windows
             int totalRam = GetTotalRamGb();
-            RamSlider.Maximum = totalRam;
+            int maxRam = totalRam;
+            if (totalRam <= 4) maxRam = Math.Max(2, totalRam - 1);
+            else if (totalRam <= 8) maxRam = totalRam - 2;
+            else maxRam = totalRam - 4;
+            RamSlider.Maximum = Math.Max(2, maxRam);
             
             LoadConfig();
 
@@ -724,8 +728,8 @@ namespace SolutionLauncher
                 else
                 {
                     // Standalone mode: Download or update from a remote source
-                    string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/version.txt";
-                    string remoteModUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionVisual.jar";
+                    string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/version.txt?t=" + DateTime.UtcNow.Ticks;
+                    string remoteModUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionVisual.jar?t=" + DateTime.UtcNow.Ticks;
                     
                     bool needDownload = false;
                     string latestVersion = "";
@@ -1343,7 +1347,8 @@ namespace SolutionLauncher
                     if (config != null)
                     {
                         NicknameInput.Text = config.Nickname ?? "Player";
-                        RamSlider.Value = config.RamGb > 0 ? config.RamGb : GetDefaultRamGb();
+                        int loadedRam = config.RamGb > 0 ? config.RamGb : GetDefaultRamGb();
+                        RamSlider.Value = Math.Min(loadedRam, RamSlider.Maximum);
                         RamValueText.Text = $"{(int)RamSlider.Value} ГБ";
                         currentModVersion = config.ModVersion ?? "";
                         return;
@@ -1448,8 +1453,8 @@ namespace SolutionLauncher
 
             var allowedHwids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             
-            // Fetch remote HWID database
-            string remoteUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/hwid.txt";
+            // Fetch remote HWID database (with cache buster)
+            string remoteUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/hwid.txt?t=" + DateTime.UtcNow.Ticks;
             try
             {
                 using (var client = new HttpClient())
@@ -1517,9 +1522,9 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.5";
-                string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
-                string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
+                string currentVersion = "3.6.4.6";
+                string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt?t=" + DateTime.UtcNow.Ticks;
+                string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe?t=" + DateTime.UtcNow.Ticks;
 
                 try
                 {
