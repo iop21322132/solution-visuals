@@ -24,6 +24,7 @@ namespace SolutionLauncher
         private static bool useMojangMirror = false;
         private bool isLaunching = false;
         private string currentModVersion = "";
+        private Process gameProcess;
 
         private string GetGitHubApiUrl(string rawUrl)
         {
@@ -1116,7 +1117,7 @@ namespace SolutionLauncher
                     CreateNoWindow = true
                 };
 
-                var gameProcess = Process.Start(startInfo);
+                gameProcess = Process.Start(startInfo);
                 if (gameProcess == null)
                 {
                     Log("[ОШИБКА] Не удалось запустить процесс игры.");
@@ -1607,6 +1608,14 @@ namespace SolutionLauncher
                         MessageBoxImage.Error
                     );
                     
+                    try
+                    {
+                        if (gameProcess != null && !gameProcess.HasExited)
+                        {
+                            gameProcess.Kill();
+                        }
+                    }
+                    catch {}
                     Application.Current.Shutdown();
                 });
                 throw new UnauthorizedAccessException("HWID not authorized.");
@@ -1617,7 +1626,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.7";
+                string currentVersion = "3.6.4.8";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
@@ -1719,6 +1728,20 @@ namespace SolutionLauncher
                     Log($"[ПРЕДУПРЕЖДЕНИЕ] Не удалось проверить обновления лаунчера: {ex.Message}");
                 }
             });
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            try
+            {
+                if (gameProcess != null && !gameProcess.HasExited)
+                {
+                    gameProcess.Kill();
+                }
+            }
+            catch {}
+            Environment.Exit(0);
         }
 
         private string GetMachineHWID()

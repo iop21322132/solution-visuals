@@ -4,8 +4,12 @@ echo ==============================================
 echo    Solution Visual - Автоматическая публикация
 echo ==============================================
 
-:: 1. Ask for version
-set /p NEW_VERSION="Введите новую версию (например, 3.6.4): "
+:: 1. Auto-detect and bump version
+for /f "delims=" %%i in ('powershell -Command "$v = (Get-Content version.txt).Trim(); $parts = $v.Split('.'); $parts[-1] = [int]$parts[-1] + 1; $parts -join '.'"') do set AUTO_VERSION=%%i
+
+set /p NEW_VERSION="Введите новую версию (по умолчанию %AUTO_VERSION%, нажмите Enter): "
+if "%NEW_VERSION%"=="" set NEW_VERSION=%AUTO_VERSION%
+
 if "%NEW_VERSION%"=="" (
     echo [ОШИБКА] Версия не может быть пустой!
     pause
