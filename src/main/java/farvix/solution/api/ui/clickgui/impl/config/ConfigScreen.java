@@ -165,7 +165,6 @@ public class ConfigScreen extends MenuScreen {
         
         // Боковая панель создания конфига (справа от GUI)
         if (createPanelAnimation.getValue() > 0.01) {
-            context.disableScissor(); // Отключаем scissor, чтобы панель справа не обрезалась
             renderCreatePanel(context, mouseX, mouseY);
         }
     }

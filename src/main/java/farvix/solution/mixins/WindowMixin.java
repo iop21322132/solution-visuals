@@ -15,7 +15,7 @@ public class WindowMixin {
         if (physicalWidth <= 0) {
             return 1.0;
         }
-        double customScale = physicalWidth / 960.0;
+        double customScale = physicalWidth / 1440.0;
         if (customScale < 0.5) customScale = 0.5;
         return customScale;
     }
