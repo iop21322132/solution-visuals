@@ -32,7 +32,23 @@ namespace SolutionLauncher
             string resolved = url;
             if (useGitHubMirror && resolved.StartsWith("https://raw.githubusercontent.com/"))
             {
-                resolved = resolved.Replace("https://raw.githubusercontent.com/", "https://raw.gitmirror.com/");
+                if (!resolved.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    string path = resolved.Substring("https://raw.githubusercontent.com/".Length);
+                    var parts = path.Split(new[] { '/' }, 4);
+                    if (parts.Length >= 4)
+                    {
+                        string user = parts[0];
+                        string repo = parts[1];
+                        string branch = parts[2];
+                        string file = parts[3];
+                        resolved = $"https://cdn.jsdelivr.net/gh/{user}/{repo}@{branch}/{file}";
+                    }
+                }
+                else
+                {
+                    resolved = resolved.Replace("https://raw.githubusercontent.com/", "https://raw.gitmirror.com/");
+                }
             }
             if (useMojangMirror)
             {
@@ -1479,7 +1495,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.3";
+                string currentVersion = "3.6.4.4";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
@@ -1517,23 +1533,45 @@ namespace SolutionLauncher
                             string tempExePath = Path.Combine(currentDir, "SolutionLauncher.new");
 
                             // Download new exe
-                            string resolvedExeUrl = ResolveUrl(remoteExeUrl);
-                            byte[] newExeBytes;
-                            try
+                            byte[] newExeBytes = null;
+                            var exeUrlsToTry = new List<string>
                             {
-                                newExeBytes = client.GetByteArrayAsync(resolvedExeUrl).GetAwaiter().GetResult();
+                                ResolveUrl(remoteExeUrl),
+                                remoteExeUrl.Replace("https://raw.githubusercontent.com/", "https://raw.gitmirror.com/"),
+                                "https://ghproxy.net/" + remoteExeUrl
+                            };
+
+                            Exception lastEx = null;
+                            foreach (var urlOption in exeUrlsToTry)
+                            {
+                                try
+                                {
+                                    newExeBytes = client.GetByteArrayAsync(urlOption).GetAwaiter().GetResult();
+                                    break;
+                                }
+                                catch (Exception ex)
+                                {
+                                    lastEx = ex;
+                                }
                             }
-                            catch
+
+                            if (newExeBytes == null)
                             {
                                 if (!useGitHubMirror)
                                 {
                                     useGitHubMirror = true;
-                                    resolvedExeUrl = ResolveUrl(remoteExeUrl);
-                                    newExeBytes = client.GetByteArrayAsync(resolvedExeUrl).GetAwaiter().GetResult();
+                                    try
+                                    {
+                                        newExeBytes = client.GetByteArrayAsync(ResolveUrl(remoteExeUrl)).GetAwaiter().GetResult();
+                                    }
+                                    catch
+                                    {
+                                        throw lastEx ?? new Exception("Failed to download launcher update from all mirrors.");
+                                    }
                                 }
                                 else
                                 {
-                                    throw;
+                                    throw lastEx ?? new Exception("Failed to download launcher update from all mirrors.");
                                 }
                             }
                             File.WriteAllBytes(tempExePath, newExeBytes);
