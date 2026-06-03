@@ -141,10 +141,40 @@ namespace SolutionLauncher
             LoadConfig();
 
             // Perform HWID access check
-            CheckHWID();
+            try
+            {
+                CheckHWID();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
+
+            // Start periodic HWID background check (every 15 seconds)
+            StartPeriodicHwidCheck();
 
             // Perform self-update check
             CheckLauncherUpdate();
+        }
+
+        private void StartPeriodicHwidCheck()
+        {
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(15));
+                    try
+                    {
+                        CheckHWID();
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        break;
+                    }
+                    catch {}
+                }
+            });
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -206,7 +236,12 @@ namespace SolutionLauncher
 
             try
             {
+                await Task.Run(() => CheckHWID());
                 await Task.Run(() => StartLaunchPipeline(nickname, ramGb));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Abort launching cleanly as application shutdown is already initiated in CheckHWID
             }
             catch (Exception ex)
             {
@@ -1337,23 +1372,27 @@ namespace SolutionLauncher
             
             if (!allowedHwids.Contains(hwid))
             {
-                try
+                Dispatcher.Invoke(() =>
                 {
-                    Clipboard.SetText(hwid);
-                }
-                catch {}
-                
-                string errorMsg = "Вас нету в базе данных что бы вас добавили отпишите в тикет что бы вас добавили и вставьте сообщение из буфера обмена которое является вашим Hwid - ключом.\n\n" +
-                                  $"Ваш HWID-ключ (уже скопирован в буфер обмена):\n{hwid}";
+                    try
+                    {
+                        Clipboard.SetText(hwid);
+                    }
+                    catch {}
+                    
+                    string errorMsg = "Вас нету в базе данных что бы вас добавили отпишите в тикет что бы вас добавили и вставьте сообщение из буфера обмена которое является вашим Hwid - ключом.\n\n" +
+                                      $"Ваш HWID-ключ (уже скопирован в буфер обмена):\n{hwid}";
 
-                MessageBox.Show(
-                    errorMsg,
-                    "Доступ ограничен",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
-                
-                Application.Current.Shutdown();
+                    MessageBox.Show(
+                        errorMsg,
+                        "Доступ ограничен",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error
+                    );
+                    
+                    Application.Current.Shutdown();
+                });
+                throw new UnauthorizedAccessException("HWID not authorized.");
             }
         }
 
@@ -1361,7 +1400,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.1";
+                string currentVersion = "3.6.4.2";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
