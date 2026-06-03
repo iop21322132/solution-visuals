@@ -982,7 +982,7 @@ namespace SolutionLauncher
                 var formattedArgs = new List<string>
                 {
                     $"-Xmx{ramGb}G",
-                    $"-Xms{ramGb}G",
+                    "-Xms512M",
                     "-DFabricMcEmu=net.minecraft.client.main.Main",
                     "-cp",
                     FormatArg(classpath),
@@ -1063,15 +1063,37 @@ namespace SolutionLauncher
                     {
                         Dispatcher.Invoke(() =>
                         {
-                            MessageBox.Show(
-                                "Не удалось запустить игру из-за нехватки виртуальной памяти (файла подкачки) на вашем компьютере.\n\n" +
-                                "Решения:\n" +
-                                "1. Откройте Настройки в лаунчере и уменьшите количество выделяемой оперативной памяти (RAM) до 2 ГБ или 3 ГБ.\n" +
-                                "2. Увеличьте размер файла подкачки в настройках Windows (или включите его, если он отключен).",
-                                "Недостаточно виртуальной памяти",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning
-                            );
+                            int currentRam = (int)RamSlider.Value;
+                            int newRam = Math.Max(2, currentRam - 1);
+                            
+                            if (newRam < currentRam)
+                            {
+                                RamSlider.Value = newRam;
+                                RamValueText.Text = $"{newRam} ГБ";
+                                SaveConfig();
+                                Log($"[СИСТЕМА] Автоматически уменьшено выделение RAM с {currentRam} ГБ до {newRam} ГБ из-за ошибки памяти.");
+                                
+                                MessageBox.Show(
+                                    $"Не удалось запустить игру из-за нехватки виртуальной памяти (файла подкачки) на вашем компьютере.\n\n" +
+                                    $"Мы автоматически уменьшили выделение оперативной памяти в настройках до {newRam} ГБ.\n\n" +
+                                    "Пожалуйста, попробуйте нажать кнопку 'Начать игру' снова.",
+                                    "Недостаточно виртуальной памяти",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning
+                                );
+                            }
+                            else
+                            {
+                                MessageBox.Show(
+                                    "Не удалось запустить игру из-за нехватки виртуальной памяти (файла подкачки) на вашем компьютере.\n\n" +
+                                    "Решения:\n" +
+                                    "1. Закройте все лишние программы (браузеры, Discord, другие игры).\n" +
+                                    "2. Увеличьте размер файла подкачки в настройках Windows (или включите его, если он отключен).",
+                                    "Недостаточно виртуальной памяти",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning
+                                );
+                            }
                         });
                     }
                     try
@@ -1495,7 +1517,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.6.4.4";
+                string currentVersion = "3.6.4.5";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
