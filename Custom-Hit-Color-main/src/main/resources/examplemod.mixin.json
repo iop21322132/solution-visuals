@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "dev.padiloi1337.hitcolor.mixins",
+	"compatibilityLevel": "JAVA_8",
+	"client": [
+		"RenderPlayerMixin",
+		"LivingRendererMixin",
+		"ModelRendererMixin",
+		"ModelMixin",
+		"BipedModelMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"refmap": "examplemod.mixin-refmap.json"
+}

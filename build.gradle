@@ -1,0 +1,142 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.guardsquare:proguard-gradle:7.6.0'
+    }
+}
+
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+loom {
+	accessWidenerPath = file("src/main/resources/solution.accesswidener")
+}
+
+base {
+	archivesName = project.archives_base_name
+}
+configurations {
+    addtojar
+}
+repositories {
+    maven {
+        name = "meteor-maven"
+        url = "https://maven.meteordev.org/releases"
+    }
+    mavenCentral()
+    maven { url "https://jitpack.io" }
+    maven {
+        name = "redstones-maven"
+        url = "https://maven.redstones.dev/releases"
+    }
+}
+
+dependencies {
+    implementation "meteordevelopment:orbit:0.2.3"
+    implementation "org.json:json:20240303"
+    implementation("dev.redstones.mediaplayerinfo:media-player-info:0.1.0") {
+        exclude group: 'org.ow2.asm'
+        exclude group: 'org.objectweb.asm'
+    }
+    addtojar "meteordevelopment:orbit:0.2.3"
+    addtojar "org.json:json:20240303"
+    addtojar("dev.redstones.mediaplayerinfo:media-player-info:0.1.0") {
+        exclude group: 'org.ow2.asm'
+        exclude group: 'org.objectweb.asm'
+    }
+    implementation("com.github.jagrosh:DiscordIPC:master") {
+        exclude group: 'net.java.dev.jna', module: 'jna'
+        exclude group: 'net.java.dev.jna', module: 'jna-platform'
+    }
+    addtojar("com.github.jagrosh:DiscordIPC:master") {
+        exclude group: 'net.java.dev.jna', module: 'jna'
+        exclude group: 'net.java.dev.jna', module: 'jna-platform'
+    }
+
+    // Discord RPC — положи jar в папку libs/
+    // Используем только для компиляции и упаковки, JNA исключаем
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+    addtojar fileTree(dir: 'libs', include: ['*.jar'])
+
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	compileOnly 'org.projectlombok:lombok:1.18.34'
+	annotationProcessor 'org.projectlombok:lombok:1.18.34'
+
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+java {
+	withSourcesJar()
+
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+	inputs.property "archivesName", project.base.archivesName
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from("LICENSE") {
+        rename { "${it}_${project.archivesBaseName}" }
+    }
+    from {
+        configurations.addtojar.findAll { it.name.endsWith('jar') }.collect { zipTree(it) }
+    }
+    // Исключаем старую JNA из libs jar — Minecraft уже содержит совместимую версию
+    exclude 'com/sun/jna/**'
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name
+			from components.java
+		}
+	}
+	repositories {}
+}
+
+import proguard.gradle.ProGuardTask
+
+task proguard(type: ProGuardTask) {
+    dependsOn jar
+    configuration 'proguard-rules.pro'
+
+    injars jar.archiveFile
+    outjars layout.buildDirectory.file("libs/${project.archives_base_name}-${version}-obfuscated.jar")
+
+    libraryjars "${System.getProperty('java.home')}/jmods"
+    libraryjars configurations.compileClasspath
+}
+
+remapJar {
+    inputFile.set(proguard.outputs.files.singleFile)
+    dependsOn proguard
+}
+

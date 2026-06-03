@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "developer",
+	"version": "${version}",
+	"name": "Solution Visual",
+	"description": "Solution Visual - Advanced Minecraft Client",
+	"authors": [
+		"solution"
+	],
+	"contact": {
+		"homepage": "https://solution.pw/",
+		"sources": "https://github.com/solution"
+	},
+	"license": "CC0-1.0",
+	"accessWidener": "solution.accesswidener",
+	"icon": "assets/solution/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"farvix.solution.Client"
+		]
+	},
+	"mixins": [
+		"solution.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.14",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

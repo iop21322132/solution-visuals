@@ -1,0 +1,38 @@
+{
+  "kill.pan": {
+    "sounds": [
+      {
+        "name": "solution:pan",
+        "volume": 10.0,
+        "stream": false
+      }
+    ]
+  },
+  "hit.crit": {
+    "sounds": [
+      {
+        "name": "solution:crit",
+        "volume": 1.0,
+        "stream": false
+      }
+    ]
+  },
+  "hit.bell": {
+    "sounds": [
+      {
+        "name": "solution:bell",
+        "volume": 1.0,
+        "stream": false
+      }
+    ]
+  },
+  "hit.bonk": {
+    "sounds": [
+      {
+        "name": "solution:bonk",
+        "volume": 1.0,
+        "stream": false
+      }
+    ]
+  }
+}

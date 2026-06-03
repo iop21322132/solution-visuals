@@ -1,0 +1,2 @@
+C:\Users\nuzer\Desktop\SolutionVisuals 3.6.1\launcher\bin\Release\net10.0-windows\win-x64\publish\SolutionLauncher.pdb
+C:\Users\nuzer\Desktop\SolutionVisuals 3.6.1\launcher\bin\Release\net10.0-windows\win-x64\publish\SolutionLauncher.exe

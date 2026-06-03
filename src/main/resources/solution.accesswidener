@@ -1,0 +1,9 @@
+accessWidener	v1	named
+
+accessible method net/minecraft/client/world/ClientWorld getPendingUpdateManager ()Lnet/minecraft/client/network/PendingUpdateManager;
+accessible field net/minecraft/client/texture/NativeImage pointer J
+accessible field net/minecraft/client/render/WorldRenderer frustum Lnet/minecraft/client/render/Frustum;
+accessible field net/minecraft/client/network/ClientPlayerInteractionManager blockBreakingCooldown I
+accessible field net/minecraft/client/MinecraftClient itemUseCooldown I
+accessible field net/minecraft/entity/LivingEntity jumpingCooldown I
+accessible method net/minecraft/entity/Entity setFlag (IZ)V
