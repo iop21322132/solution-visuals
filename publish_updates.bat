@@ -62,11 +62,15 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-echo [7/7] Сброс кэша CDN jsDelivr для мгновенного обновления...
-powershell -Command "Invoke-WebRequest -Uri 'https://purge.jsdelivr.net/gh/iop21322132/solution-visuals@main/version.txt' -UseBasicParsing | Out-Null"
-powershell -Command "Invoke-WebRequest -Uri 'https://purge.jsdelivr.net/gh/iop21322132/solution-visuals@main/hwid.txt' -UseBasicParsing | Out-Null"
-powershell -Command "Invoke-WebRequest -Uri 'https://purge.jsdelivr.net/gh/iop21322132/solution-visuals@main/SolutionVisual.jar' -UseBasicParsing | Out-Null"
-powershell -Command "Invoke-WebRequest -Uri 'https://purge.jsdelivr.net/gh/iop21322132/solution-visuals@main/launcher_version.txt' -UseBasicParsing | Out-Null"
+echo [7/7] Загрузка обновлений на веб-сервер...
+curl -s -F "file=@version.txt" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+echo.
+curl -s -F "file=@launcher_version.txt" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+echo.
+curl -s -F "file=@SolutionVisual.jar" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+echo.
+curl -s -F "file=@SolutionLauncher.exe" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+echo.
 
 echo ==============================================
 echo    ОБНОВЛЕНИЕ УСПЕШНО ОПУБЛИКОВАНО!

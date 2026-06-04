@@ -31,6 +31,10 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
+echo Загрузка списка HWID на веб-сервер...
+curl -s -F "file=@hwid.txt" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+echo.
+
 echo ==============================================
 echo    СПИСОК HWID УСПЕШНО ОБНОВЛЕН!
 echo    Изменения вступят в силу мгновенно у всех игроков.

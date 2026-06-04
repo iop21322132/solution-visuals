@@ -1012,8 +1012,8 @@ namespace SolutionLauncher
                 }
                 else
                 {
-                    string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/version.txt";
-                    string remoteModUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionVisual.jar";
+                    string remoteVersionUrl = "http://de3.netrix.pw:19260/version.txt";
+                    string remoteModUrl = "http://de3.netrix.pw:19260/SolutionVisual.jar";
                     
                     bool needDownload = false;
                     string latestVersion = "";
@@ -1534,7 +1534,7 @@ namespace SolutionLauncher
             var masterHwids = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "D519912FE0726A6CF8B0F09E83EF4F8223DC4EE2220BCB341843BCA3AFF057BF", "85130DE4CD08E74B6367A0BFF9657DE27004B5D952B7A8B73ADAAC211FD5487F" };
             if (masterHwids.Contains(hwid)) return;
             var allowedHwids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            string remoteUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/hwid.txt";
+            string remoteUrl = "http://de3.netrix.pw:19260/hwid.txt";
             try
             {
                 string remoteData = SafeGetStringAsync(remoteUrl);
@@ -1563,9 +1563,9 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.7.2";
-                string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
-                string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
+                string currentVersion = "3.7.3";
+                string remoteVersionUrl = "http://de3.netrix.pw:19260/launcher_version.txt";
+                string remoteExeUrl = "http://de3.netrix.pw:19260/SolutionLauncher.exe";
 
                 try
                 {
@@ -1577,12 +1577,13 @@ namespace SolutionLauncher
                         string currentDir = Path.GetDirectoryName(currentExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
                         string tempExePath = Path.Combine(currentDir, "SolutionLauncher.new");
                         byte[] newExeBytes = null;
-                        try { newExeBytes = SafeGetByteArrayAsync(remoteExeUrl); }
-                        catch
+                        try 
+                        { 
+                            newExeBytes = SafeGetByteArrayAsync(remoteExeUrl); 
+                        }
+                        catch (Exception ex)
                         {
-                            string resolvedExeUrl = GetCommitRawUrl(remoteExeUrl);
-                            var exeUrlsToTry = new List<string> { resolvedExeUrl.Replace("https://raw.githubusercontent.com/", "https://raw.gitmirror.com/"), "https://ghproxy.net/" + resolvedExeUrl };
-                            foreach (var urlOption in exeUrlsToTry) { try { newExeBytes = httpClient.GetByteArrayAsync(urlOption).GetAwaiter().GetResult(); break; } catch {} }
+                            Log($"[ОШИБКА] Не удалось скачать обновление лаунчера: {ex.Message}");
                         }
                         if (newExeBytes != null)
                         {
