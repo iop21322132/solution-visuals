@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SolutionLauncher"
         mc:Ignorable="d"
-        Title="Solution Launcher 3.7"
+        Title="Solution Launcher 3.7.1" Height="500" Width="850"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" MouseLeftButtonDown="Window_MouseLeftButtonDown">
     
@@ -62,11 +62,11 @@
             <!-- Custom Title Bar -->
             <Border Grid.Row="0" Background="#18181B" CornerRadius="12,12,0,0" VerticalAlignment="Top" Height="35">
                 <Grid>
-                    <TextBlock Text="Solution Launcher 3.7"/>
+                    <TextBlock Text="Solution Launcher 3.7.1" Foreground="#A1A1AA" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="15,0,0,0" FontWeight="SemiBold" FontSize="12" FontFamily="Segoe UI"/>
                     
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="вЂ”" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click"/>
-                        <Button Content="вњ•" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
+                        <Button Content="—" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click"/>
+                        <Button Content="✕" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -84,10 +84,10 @@
                     <StackPanel x:Name="LoginPanel" Margin="0,10,15,0" VerticalAlignment="Stretch" Visibility="Visible">
                         <Grid Margin="0,0,0,15">
                             <StackPanel>
-                                <TextBlock Text="Р’С…РѕРґ РІ Solution Visual" Foreground="White" FontSize="20" FontWeight="Bold" FontFamily="Segoe UI"/>
-                                <TextBlock Text="Р’РІРµРґРёС‚Рµ РЅРёРєРЅРµР№Рј РґР»СЏ Р°РІС‚РѕСЂРёР·Р°С†РёРё" Foreground="#71717A" FontSize="11" FontFamily="Segoe UI"/>
+                                <TextBlock Text="Вход в Solution Visual" Foreground="White" FontSize="20" FontWeight="Bold" FontFamily="Segoe UI"/>
+                                <TextBlock Text="Введите никнейм для авторизации" Foreground="#71717A" FontSize="11" FontFamily="Segoe UI"/>
                             </StackPanel>
-                            <Button x:Name="OpenSettingsButton" Content="вљ™" HorizontalAlignment="Right" VerticalAlignment="Top" 
+                            <Button x:Name="OpenSettingsButton" Content="?" HorizontalAlignment="Right" VerticalAlignment="Top" 
                                     Width="30" Height="30" Click="OpenSettingsButton_Click" Cursor="Hand"
                                     Background="Transparent" Foreground="#71717A" BorderThickness="0" FontSize="16">
                                 <Button.Style>
@@ -112,7 +112,7 @@
                             </Button>
                         </Grid>
                         
-                        <TextBlock Text="РќРёРєРЅРµР№Рј" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
+                        <TextBlock Text="Никнейм" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
                         <Grid Height="40">
                             <Border CornerRadius="6" Background="#18181B" BorderBrush="#27272A" BorderThickness="1">
                                 <TextBox x:Name="NicknameInput" Background="Transparent" BorderThickness="0" Foreground="White" 
@@ -121,14 +121,14 @@
                             </Border>
                         </Grid>
 
-                        <TextBlock Text="Р’РµСЂСЃРёСЏ РёРіСЂС‹" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,15,0,5" FontFamily="Segoe UI"/>
+                        <TextBlock Text="Версия игры" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,15,0,5" FontFamily="Segoe UI"/>
                         <Grid Height="40">
                             <Border CornerRadius="6" Background="#18181B" BorderBrush="#27272A" BorderThickness="1">
                                 <TextBlock Text="1.21.4 (Fabric)" Foreground="#E4E4E7" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="13" FontFamily="Segoe UI"/>
                             </Border>
                         </Grid>
 
-                        <Button x:Name="PlayButton" Content="РќР°С‡Р°С‚СЊ РёРіСЂСѓ" Margin="0,25,0,0" Height="45" Click="PlayButton_Click" Cursor="Hand">
+                        <Button x:Name="PlayButton" Content="Начать игру" Margin="0,25,0,0" Height="45" Click="PlayButton_Click" Cursor="Hand">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Background" Value="#22C55E"/>
@@ -148,15 +148,15 @@
                             </Button.Style>
                         </Button>
                         
-                        <TextBlock x:Name="StatusLabel" Text="Р“РѕС‚РѕРІ Рє Р·Р°РїСѓСЃРєСѓ" Foreground="#71717A" FontSize="12" Margin="0,20,0,0" HorizontalAlignment="Center" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                        <TextBlock x:Name="StatusLabel" Text="Готов к запуску" Foreground="#71717A" FontSize="12" Margin="0,20,0,0" HorizontalAlignment="Center" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                     </StackPanel>
 
                     <!-- Settings View Panel -->
                     <StackPanel x:Name="SettingsPanel" Margin="0,10,15,0" VerticalAlignment="Stretch" Visibility="Collapsed">
-                        <TextBlock Text="РќР°СЃС‚СЂРѕР№РєРё" Foreground="White" FontSize="20" FontWeight="Bold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
-                        <TextBlock Text="РќР°СЃС‚СЂРѕР№С‚Рµ РїР°СЂР°РјРµС‚СЂС‹ Р·Р°РїСѓСЃРєР° РёРіСЂС‹" Foreground="#71717A" FontSize="11" Margin="0,0,0,20" FontFamily="Segoe UI"/>
+                        <TextBlock Text="Настройки" Foreground="White" FontSize="20" FontWeight="Bold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
+                        <TextBlock Text="Настройте параметры запуска игры" Foreground="#71717A" FontSize="11" Margin="0,0,0,20" FontFamily="Segoe UI"/>
 
-                        <TextBlock Text="Р’С‹РґРµР»РµРЅРёРµ РћР—РЈ (РџР°РјСЏС‚СЊ)" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
+                        <TextBlock Text="Выделение ОЗУ (Память)" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
                         <Grid Height="40" Margin="0,0,0,15">
                             <Border CornerRadius="6" Background="#18181B" BorderBrush="#27272A" BorderThickness="1">
                                 <Grid Margin="10,0,10,0">
@@ -166,23 +166,23 @@
                                     </Grid.ColumnDefinitions>
                                     <Slider x:Name="RamSlider" Grid.Column="0" VerticalAlignment="Center" Minimum="1" Maximum="16" Value="4" 
                                             IsSnapToTickEnabled="True" TickFrequency="1" Focusable="False" ValueChanged="RamSlider_ValueChanged"/>
-                                    <TextBlock x:Name="RamValueText" Grid.Column="1" Text="4 Р“Р‘" Foreground="#22C55E" VerticalAlignment="Center" 
+                                    <TextBlock x:Name="RamValueText" Grid.Column="1" Text="4 ГБ" Foreground="#22C55E" VerticalAlignment="Center" 
                                                FontWeight="Bold" Margin="10,0,0,0" FontSize="13" FontFamily="Segoe UI"/>
                                 </Grid>
                             </Border>
                         </Grid>
 
-                        <TextBlock Text="РђРІС‚РѕР·Р°РіСЂСѓР·РєР° Java 21 JRE" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
+                        <TextBlock Text="Автозагрузка Java 21 JRE" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
                         <Grid Height="40" Margin="0,0,0,25">
                             <Border CornerRadius="6" Background="#18181B" BorderBrush="#27272A" BorderThickness="1" Padding="10,0,10,0">
                                 <Grid>
-                                    <TextBlock Text="РђРІС‚РѕСЃРєР°С‡РёРІР°РЅРёРµ Adoptium JRE" Foreground="#E4E4E7" VerticalAlignment="Center" FontSize="12" FontFamily="Segoe UI"/>
-                                    <TextBlock Text="РђРљРўРР’РќРћ" Foreground="#22C55E" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"/>
+                                    <TextBlock Text="Автоскачивание Adoptium JRE" Foreground="#E4E4E7" VerticalAlignment="Center" FontSize="12" FontFamily="Segoe UI"/>
+                                    <TextBlock Text="АКТИВНО" Foreground="#22C55E" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"/>
                                 </Grid>
                             </Border>
                         </Grid>
 
-                        <Button x:Name="CloseSettingsButton" Content="РЎРѕС…СЂР°РЅРёС‚СЊ" Height="45" Click="CloseSettingsButton_Click" Cursor="Hand">
+                        <Button x:Name="CloseSettingsButton" Content="Сохранить" Height="45" Click="CloseSettingsButton_Click" Cursor="Hand">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Background" Value="#27272A"/>
@@ -216,13 +216,13 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     
-                    <TextBlock Grid.Row="0" Text="РљРѕРЅСЃРѕР»СЊ РѕС‚Р»Р°РґРєРё" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
+                    <TextBlock Grid.Row="0" Text="Консоль отладки" Foreground="#A1A1AA" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5" FontFamily="Segoe UI"/>
                     
                     <Border Grid.Row="1" CornerRadius="6" Background="#09090B" BorderBrush="#27272A" BorderThickness="1">
                         <ScrollViewer x:Name="ConsoleScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="10">
                             <TextBox x:Name="ConsoleOutput" Background="Transparent" BorderThickness="0" Foreground="#22C55E" 
                                      IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" FontSize="11.5" FontFamily="Consolas"
-                                     Text="[Solution Launcher] РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ...&#x0a;[Solution Launcher] Р’С‹Р±РµСЂРёС‚Рµ РЅРёРєРЅРµР№Рј Рё РЅР°Р¶РјРёС‚Рµ 'РќР°С‡Р°С‚СЊ РёРіСЂСѓ'.&#x0a;"/>
+                                     Text="[Solution Launcher] Инициализация...&#x0a;[Solution Launcher] Выберите никнейм и нажмите 'Начать игру'.&#x0a;"/>
                         </ScrollViewer>
                     </Border>
                 </Grid>
@@ -236,7 +236,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0" Margin="0,0,0,5">
-                        <TextBlock x:Name="ProgressDetails" Text="РџСЂРѕРіСЂРµСЃСЃ" Foreground="#A1A1AA" FontSize="11" HorizontalAlignment="Left" FontFamily="Segoe UI"/>
+                        <TextBlock x:Name="ProgressDetails" Text="Прогресс" Foreground="#A1A1AA" FontSize="11" HorizontalAlignment="Left" FontFamily="Segoe UI"/>
                         <TextBlock x:Name="ProgressPercent" Text="0%" Foreground="#22C55E" FontSize="11" HorizontalAlignment="Right" FontWeight="Bold" FontFamily="Segoe UI"/>
                     </Grid>
                     <ProgressBar Grid.Row="1" x:Name="LaunchProgressBar" Height="8" Minimum="0" Maximum="100" Value="0" Foreground="#22C55E" Background="#27272A" BorderThickness="0">

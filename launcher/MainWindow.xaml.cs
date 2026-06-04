@@ -255,13 +255,13 @@ namespace SolutionLauncher
                 {
                     useGitHubMirror = true;
                     activatedMirror = true;
-                    Log($"[РЎР•РўР¬] РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє GitHub ({ex.Message}). РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РЅР° Р·РµСЂРєР°Р»Рѕ...");
+                    Log($"[СЕТЬ] Ошибка подключения к GitHub ({ex.Message}). Переключение на зеркало...");
                 }
                 else if ((url.Contains("mojang.com") || url.Contains("fabricmc.net")) && !useMojangMirror)
                 {
                     useMojangMirror = true;
                     activatedMirror = true;
-                    Log($"[РЎР•РўР¬] РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Mojang/Fabric ({ex.Message}). РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РЅР° Р·РµСЂРєР°Р»Рѕ...");
+                    Log($"[СЕТЬ] Ошибка подключения к Mojang/Fabric ({ex.Message}). Переключение на зеркало...");
                 }
 
                 if (activatedMirror)
@@ -352,13 +352,13 @@ namespace SolutionLauncher
                 {
                     useGitHubMirror = true;
                     activatedMirror = true;
-                    Log($"[РЎР•РўР¬] РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє GitHub ({ex.Message}). РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РЅР° Р·РµСЂРєР°Р»Рѕ...");
+                    Log($"[СЕТЬ] Ошибка подключения к GitHub ({ex.Message}). Переключение на зеркало...");
                 }
                 else if ((url.Contains("mojang.com") || url.Contains("fabricmc.net")) && !useMojangMirror)
                 {
                     useMojangMirror = true;
                     activatedMirror = true;
-                    Log($"[РЎР•РўР¬] РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Mojang/Fabric ({ex.Message}). РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РЅР° Р·РµСЂРєР°Р»Рѕ...");
+                    Log($"[СЕТЬ] Ошибка подключения к Mojang/Fabric ({ex.Message}). Переключение на зеркало...");
                 }
 
                 if (activatedMirror)
@@ -489,7 +489,7 @@ namespace SolutionLauncher
             string nickname = NicknameInput.Text.Trim();
             if (string.IsNullOrEmpty(nickname))
             {
-                MessageBox.Show("РџРѕР¶Р°Р»СѓР№СЃС‚Р°, РІРІРµРґРёС‚Рµ РЅРёРєРЅРµР№Рј РґР»СЏ Р°РІС‚РѕСЂРёР·Р°С†РёРё.", "РћС€РёР±РєР°", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Пожалуйста, введите никнейм для авторизации.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -512,8 +512,8 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РџСЂРѕРёР·РѕС€РµР» СЃР±РѕР№ РїСЂРё Р·Р°РїСѓСЃРєРµ: {ex.Message}");
-                SetStatus("РћС€РёР±РєР° Р·Р°РїСѓСЃРєР°", 0);
+                Log($"[ОШИБКА] Произошел сбой при запуске: {ex.Message}");
+                SetStatus("Ошибка запуска", 0);
             }
             finally
             {
@@ -546,18 +546,18 @@ namespace SolutionLauncher
 
         private void StartLaunchPipeline(string nickname, int ramGb)
         {
-            Log("РќР°С‡Р°Р»Рѕ РїСЂРѕС†РµСЃСЃР° РїРѕРґРіРѕС‚РѕРІРєРё РёРіСЂС‹...");
+            Log("Начало процесса подготовки игры...");
 
             string gameDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".solutionvisuals");
             string targetModJar = Path.Combine(gameDir, "libraries", "farvix", "solution", "core", "1.0.0", "core-api.dll");
             if (IsFileLocked(targetModJar))
             {
-                Log("[РћРЁРР‘РљРђ] РћР±РЅР°СЂСѓР¶РµРЅР° Р·Р°РїСѓС‰РµРЅРЅР°СЏ РєРѕРїРёСЏ РёРіСЂС‹ (С„Р°Р№Р» Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ).");
+                Log("[ОШИБКА] Обнаружена запущенная копия игры (файл заблокирован).");
                 Dispatcher.Invoke(() =>
                 {
                     MessageBox.Show(
-                        "РРіСЂР° СѓР¶Рµ Р·Р°РїСѓС‰РµРЅР° РёР»Рё РїСЂРѕС†РµСЃСЃ Р·Р°РІРёСЃ РІ С„РѕРЅРѕРІРѕРј СЂРµР¶РёРјРµ.\n\nРџРѕР¶Р°Р»СѓР№СЃС‚Р°, Р·Р°РєСЂРѕР№С‚Рµ Р·Р°РїСѓС‰РµРЅРЅСѓСЋ РєРѕРїРёСЋ Minecraft РїРµСЂРµРґ РїРѕРІС‚РѕСЂРЅС‹Рј Р·Р°РїСѓСЃРєРѕРј.",
-                        "РРіСЂР° СѓР¶Рµ Р·Р°РїСѓС‰РµРЅР°",
+                        "Игра уже запущена или процесс завис в фоновом режиме.\n\nПожалуйста, закройте запущенную копию Minecraft перед повторным запуском.",
+                        "Игра уже запущена",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning
                     );
@@ -571,20 +571,20 @@ namespace SolutionLauncher
 
             if (isDevMode)
             {
-                Log($"[Р Р•Р–РРњ Р РђР—Р РђР‘РћРўРљР] РљРѕСЂРЅРµРІР°СЏ РїР°РїРєР° РїСЂРѕРµРєС‚Р°: {rootDir}");
-                SetStatus("РЎР±РѕСЂРєР° РЅР°С€РµРіРѕ РјРѕРґР°...", 5);
+                Log($"[РЕЖИМ РАЗРАБОТКИ] Корневая папка проекта: {rootDir}");
+                SetStatus("Сборка нашего мода...", 5);
                 if (!BuildMod(rootDir!))
                 {
-                    Log("[РћРЁРР‘РљРђ] РЎР±РѕСЂРєР° РјРѕРґР° Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                    Log("[ОШИБКА] Сборка мода завершилась неудачно.");
                     return;
                 }
             }
             else
             {
-                Log("[РђР’РўРћРќРћРњРќР«Р™ Р Р•Р–РРњ] Р—Р°РїСѓСЃРє Р±РµР· РёСЃС…РѕРґРЅРѕРіРѕ РєРѕРґР°. РњРѕРґ Р±СѓРґРµС‚ Р·Р°РіСЂСѓР¶РµРЅ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.");
+                Log("[АВТОНОМНЫЙ РЕЖИМ] Запуск без исходного кода. Мод будет загружен автоматически.");
             }
 
-            SetStatus("РџРѕРґРіРѕС‚РѕРІРєР° РґРёСЂРµРєС‚РѕСЂРёР№ РёРіСЂС‹...", 15);
+            SetStatus("Подготовка директорий игры...", 15);
             gameDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".solutionvisuals");
             Directory.CreateDirectory(gameDir);
             Directory.CreateDirectory(Path.Combine(gameDir, "versions"));
@@ -592,31 +592,31 @@ namespace SolutionLauncher
             Directory.CreateDirectory(Path.Combine(gameDir, "mods"));
 
             // 2. Download Minecraft 1.21.4 client and libraries
-            SetStatus("Р—Р°РіСЂСѓР·РєР° РјРµС‚Р°РґР°РЅРЅС‹С… РёРіСЂС‹...", 20);
+            SetStatus("Загрузка метаданных игры...", 20);
             if (!DownloadMinecraftAndLibraries(gameDir))
             {
-                Log("[РћРЁРР‘РљРђ] Р—Р°РіСЂСѓР·РєР° С„Р°Р№Р»РѕРІ Minecraft Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                Log("[ОШИБКА] Загрузка файлов Minecraft завершилась неудачно.");
                 return;
             }
 
             // 3. Download Fabric Loader
-            SetStatus("РЈСЃС‚Р°РЅРѕРІРєР° Fabric...", 65);
+            SetStatus("Установка Fabric...", 65);
             if (!InstallFabric(gameDir))
             {
-                Log("[РћРЁРР‘РљРђ] РЈСЃС‚Р°РЅРѕРІРєР° Fabric Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                Log("[ОШИБКА] Установка Fabric завершилась неудачно.");
                 return;
             }
 
             // 4. Download Fabric API and copy/download SolutionVisual mod
-            SetStatus("РЈСЃС‚Р°РЅРѕРІРєР° РєРѕРјРїРѕРЅРµРЅС‚РѕРІ...", 85);
+            SetStatus("Установка компонентов...", 85);
             if (!InstallMods(isDevMode, rootDir, gameDir))
             {
-                Log("[РћРЁРР‘РљРђ] РЈСЃС‚Р°РЅРѕРІРєР° РєРѕРјРїРѕРЅРµРЅС‚РѕРІ Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РЅРµСѓРґР°С‡РЅРѕ.");
+                Log("[ОШИБКА] Установка компонентов завершилась неудачно.");
                 return;
             }
 
             // 5. Launch the game
-            SetStatus("Р—Р°РїСѓСЃРє РёРіСЂС‹...", 95);
+            SetStatus("Запуск игры...", 95);
             LaunchGame(gameDir, nickname, ramGb);
         }
 
@@ -636,7 +636,7 @@ namespace SolutionLauncher
 
         private bool BuildMod(string rootDir)
         {
-            Log("Р—Р°РїСѓСЃРє СЃР±РѕСЂРєРё РјРѕРґР° SolutionVisual...");
+            Log("Запуск сборки мода SolutionVisual...");
             var startInfo = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
@@ -653,7 +653,7 @@ namespace SolutionLauncher
                 if (process == null) return false;
 
                 process.OutputDataReceived += (s, e) => { if (e.Data != null) Log($"[Gradle] {e.Data}"); };
-                process.ErrorDataReceived += (s, e) => { if (e.Data != null) Log($"[Gradle РћРЁРР‘РљРђ] {e.Data}"); };
+                process.ErrorDataReceived += (s, e) => { if (e.Data != null) Log($"[Gradle ОШИБКА] {e.Data}"); };
                 
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
@@ -667,7 +667,7 @@ namespace SolutionLauncher
         {
             try
             {
-                Log("Р—Р°РїСЂРѕСЃ РјР°РЅРёС„РµСЃС‚Р° РІРµСЂСЃРёР№ Mojang...");
+                Log("Запрос манифеста версий Mojang...");
                 string manifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
                 string manifestJson = SafeGetStringAsync(manifestUrl);
                 
@@ -686,11 +686,11 @@ namespace SolutionLauncher
 
                 if (string.IsNullOrEmpty(versionUrl))
                 {
-                    Log("Р’РµСЂСЃРёСЏ 1.21.4 РЅРµ РЅР°Р№РґРµРЅР° РІ РјР°РЅРёС„РµСЃС‚Рµ Mojang.");
+                    Log("Версия 1.21.4 не найдена в манифесте Mojang.");
                     return false;
                 }
 
-                Log("Р—Р°РіСЂСѓР·РєР° РїСЂРѕС„РёР»СЏ РІРµСЂСЃРёРё 1.21.4...");
+                Log("Загрузка профиля версии 1.21.4...");
                 string versionJson = SafeGetStringAsync(versionUrl);
                 
                 string versionDir = Path.Combine(gameDir, "versions", "1.21.4");
@@ -704,19 +704,19 @@ namespace SolutionLauncher
                 if (!File.Exists(clientJarPath))
                 {
                     string clientUrl = versionDoc.RootElement.GetProperty("downloads").GetProperty("client").GetProperty("url").GetString();
-                    Log($"Р—Р°РіСЂСѓР·РєР° client.jar (1.21.4) РёР· Mojang...");
+                    Log($"Загрузка client.jar (1.21.4) из Mojang...");
                     DownloadFileWithProgress(clientUrl, clientJarPath, 20, 40).GetAwaiter().GetResult();
                 }
                 else
                 {
-                    Log("Minecraft client.jar (1.21.4) СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.");
+                    Log("Minecraft client.jar (1.21.4) уже существует.");
                 }
 
                 // Download Libraries
                 var libraries = versionDoc.RootElement.GetProperty("libraries");
                 int libCount = libraries.GetArrayLength();
                 int idx = 0;
-                Log($"РџСЂРѕРІРµСЂРєР° Рё СЃРєР°С‡РёРІР°РЅРёРµ Р±РёР±Р»РёРѕС‚РµРє Mojang ({libCount} С€С‚.)...");
+                Log($"Проверка и скачивание библиотек Mojang ({libCount} шт.)...");
                 string officialLibDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "libraries");
 
                 foreach (var lib in libraries.EnumerateArray())
@@ -737,19 +737,19 @@ namespace SolutionLauncher
                         string officialPath = Path.Combine(officialLibDir, path);
                         if (File.Exists(officialPath))
                         {
-                            Log($"РљРѕРїРёСЂРѕРІР°РЅРёРµ Р±РёР±Р»РёРѕС‚РµРєРё РёР· .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Копирование библиотеки из .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             File.Copy(officialPath, targetPath, true);
                         }
                         else
                         {
-                            Log($"Р—Р°РіСЂСѓР·РєР° Р±РёР±Р»РёРѕС‚РµРєРё ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Загрузка библиотеки ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             byte[] libBytes = SafeGetByteArrayAsync(url);
                             File.WriteAllBytes(targetPath, libBytes);
                         }
                     }
 
                     double progress = 40.0 + ((double)idx / libCount) * 15.0;
-                    SetStatus("РЎРєР°С‡РёРІР°РЅРёРµ Р±РёР±Р»РёРѕС‚РµРє Mojang...", progress);
+                    SetStatus("Скачивание библиотек Mojang...", progress);
                 }
 
                 // Download Asset Index JSON
@@ -761,7 +761,7 @@ namespace SolutionLauncher
                 if (!File.Exists(assetIndexTarget))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(assetIndexTarget));
-                    Log($"Р—Р°РіСЂСѓР·РєР° РёРЅРґРµРєСЃР° СЂРµСЃСѓСЂСЃРѕРІ: {assetIndexId}.json");
+                    Log($"Загрузка индекса ресурсов: {assetIndexId}.json");
                     string assetsJson = SafeGetStringAsync(assetIndexUrl);
                     File.WriteAllText(assetIndexTarget, assetsJson);
                 }
@@ -770,7 +770,7 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РџСЂРё Р·Р°РіСЂСѓР·РєРµ Mojang С„Р°Р№Р»РѕРІ: {ex.Message}");
+                Log($"[ОШИБКА] При загрузке Mojang файлов: {ex.Message}");
                 return false;
             }
         }
@@ -820,13 +820,13 @@ namespace SolutionLauncher
                 {
                     useGitHubMirror = true;
                     activatedMirror = true;
-                    Log($"[РЎР•РўР¬] РћС€РёР±РєР° СЃРєР°С‡РёРІР°РЅРёСЏ СЃ GitHub ({ex.Message}). РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РЅР° Р·РµСЂРєР°Р»Рѕ...");
+                    Log($"[СЕТЬ] Ошибка скачивания с GitHub ({ex.Message}). Переключение на зеркало...");
                 }
                 else if ((url.Contains("mojang.com") || url.Contains("fabricmc.net")) && !useMojangMirror)
                 {
                     useMojangMirror = true;
                     activatedMirror = true;
-                    Log($"[РЎР•РўР¬] РћС€РёР±РєР° СЃРєР°С‡РёРІР°РЅРёСЏ СЃ Mojang/Fabric ({ex.Message}). РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РЅР° Р·РµСЂРєР°Р»Рѕ...");
+                    Log($"[СЕТЬ] Ошибка скачивания с Mojang/Fabric ({ex.Message}). Переключение на зеркало...");
                 }
 
                 if (activatedMirror)
@@ -871,7 +871,7 @@ namespace SolutionLauncher
                         {
                             double pct = (double)totalRead / totalBytes.Value;
                             double progress = startPct + pct * (endPct - startPct);
-                            SetStatus($"Р—Р°РіСЂСѓР·РєР° С„Р°Р№Р»Р° ({totalRead / 1024 / 1024}MB / {totalBytes.Value / 1024 / 1024}MB)...", progress);
+                            SetStatus($"Загрузка файла ({totalRead / 1024 / 1024}MB / {totalBytes.Value / 1024 / 1024}MB)...", progress);
                         }
                     }
                 }
@@ -882,7 +882,7 @@ namespace SolutionLauncher
         {
             try
             {
-                Log("Р—Р°РїСЂРѕСЃ РјРµС‚Р°РґР°РЅРЅС‹С… Fabric Loader...");
+                Log("Запрос метаданных Fabric Loader...");
                 string fabricProfileUrl = "https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.16.14/profile/json";
                 string profileJson = SafeGetStringAsync(fabricProfileUrl);
 
@@ -894,7 +894,7 @@ namespace SolutionLauncher
                 var libraries = profileDoc.RootElement.GetProperty("libraries");
                 int libCount = libraries.GetArrayLength();
                 int idx = 0;
-                Log($"Р—Р°РіСЂСѓР·РєР° Р±РёР±Р»РёРѕС‚РµРє Fabric ({libCount} С€С‚.)...");
+                Log($"Загрузка библиотек Fabric ({libCount} шт.)...");
 
                 string officialLibDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "libraries");
                 foreach (var lib in libraries.EnumerateArray())
@@ -913,26 +913,26 @@ namespace SolutionLauncher
                         string officialPath = Path.Combine(officialLibDir, mavenPath);
                         if (File.Exists(officialPath))
                         {
-                            Log($"РљРѕРїРёСЂРѕРІР°РЅРёРµ Fabric Р±РёР±Р»РёРѕС‚РµРєРё РёР· .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Копирование Fabric библиотеки из .minecraft ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             File.Copy(officialPath, targetPath, true);
                         }
                         else
                         {
-                            Log($"Р—Р°РіСЂСѓР·РєР° Fabric Р±РёР±Р»РёРѕС‚РµРєРё ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
+                            Log($"Загрузка Fabric библиотеки ({idx}/{libCount}): {Path.GetFileName(targetPath)}");
                             byte[] libBytes = SafeGetByteArrayAsync(downloadUrl);
                             File.WriteAllBytes(targetPath, libBytes);
                         }
                     }
 
                     double progress = 65.0 + ((double)idx / libCount) * 15.0;
-                    SetStatus("Р—Р°РіСЂСѓР·РєР° Р±РёР±Р»РёРѕС‚РµРє Fabric...", progress);
+                    SetStatus("Загрузка библиотек Fabric...", progress);
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] РџСЂРё СѓСЃС‚Р°РЅРѕРІРєРµ Fabric: {ex.Message}");
+                Log($"[ОШИБКА] При установке Fabric: {ex.Message}");
                 return false;
             }
         }
@@ -979,14 +979,14 @@ namespace SolutionLauncher
                 // 1. Download Fabric API 0.119.4+1.21.4
                 if (!File.Exists(fabricApiTarget))
                 {
-                    Log("Р—Р°РіСЂСѓР·РєР° СЃРёСЃС‚РµРјРЅС‹С… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ...");
+                    Log("Загрузка системных компонентов...");
                     string fabricApiUrl = "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/0.119.4+1.21.4/fabric-api-0.119.4+1.21.4.jar";
                     DownloadFileWithProgress(fabricApiUrl, fabricApiTarget, 85, 90).GetAwaiter().GetResult();
                     File.SetAttributes(fabricApiTarget, FileAttributes.Hidden);
                 }
                 else
                 {
-                    Log("РЎРёСЃС‚РµРјРЅС‹Рµ РєРѕРјРїРѕРЅРµРЅС‚С‹ РїСЂРѕРІРµСЂРµРЅС‹.");
+                    Log("Системные компоненты проверены.");
                 }
 
                 // 2. Install SolutionVisual mod
@@ -1005,7 +1005,7 @@ namespace SolutionLauncher
 
                     if (File.Exists(compiledModJar))
                     {
-                        Log("РћР±РЅРѕРІР»РµРЅРёРµ РєРѕРјРїРѕРЅРµРЅС‚РѕРІ...");
+                        Log("Обновление компонентов...");
                         File.Copy(compiledModJar, targetModJar, true);
                         File.SetAttributes(targetModJar, FileAttributes.Hidden);
                     }
@@ -1033,7 +1033,7 @@ namespace SolutionLauncher
                     
                     if (needDownload)
                     {
-                        Log("Р—Р°РіСЂСѓР·РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ РєРѕРјРїРѕРЅРµРЅС‚РѕРІ...");
+                        Log("Загрузка обновления компонентов...");
                         try
                         {
                             DownloadFileWithProgress(remoteModUrl, targetModJar, 90, 95).GetAwaiter().GetResult();
@@ -1046,7 +1046,7 @@ namespace SolutionLauncher
                         }
                         catch (Exception ex)
                         {
-                            Log($"РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё: {ex.Message}");
+                            Log($"Ошибка загрузки: {ex.Message}");
                         }
                     }
                 }
@@ -1055,7 +1055,7 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"РћС€РёР±РєР° СѓСЃС‚Р°РЅРѕРІРєРё: {ex.Message}");
+                Log($"Ошибка установки: {ex.Message}");
                 return false;
             }
         }
@@ -1064,11 +1064,11 @@ namespace SolutionLauncher
         {
             try
             {
-                Log("РџРѕРёСЃРє Java...");
+                Log("Поиск Java...");
                 string javaPath = FindJavaExecutable(gameDir);
                 if (string.IsNullOrEmpty(javaPath))
                 {
-                    Log("[РћРЁРР‘РљРђ] Java РЅРµ РЅР°Р№РґРµРЅР° РЅР° РІР°С€РµРј РєРѕРјРїСЊСЋС‚РµСЂРµ Рё РЅРµ СѓРґР°Р»РѕСЃСЊ СЃРєР°С‡Р°С‚СЊ РµС‘ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.");
+                    Log("[ОШИБКА] Java не найдена на вашем компьютере и не удалось скачать её автоматически.");
                     return;
                 }
 
@@ -1080,12 +1080,12 @@ namespace SolutionLauncher
                 int majorVersion = GetJavaMajorVersion(javaPath);
                 if (majorVersion > 0 && majorVersion < 21)
                 {
-                    Log($"[РћРЁРР‘РљРђ] РћР±РЅР°СЂСѓР¶РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ Java ({majorVersion}) РЅРµ РїРѕРґС…РѕРґРёС‚. РўСЂРµР±СѓРµС‚СЃСЏ Java 21 РёР»Рё РЅРѕРІРµРµ.");
+                    Log($"[ОШИБКА] Обнаруженная версия Java ({majorVersion}) не подходит. Требуется Java 21 или новее.");
                     Dispatcher.Invoke(() =>
                     {
                         MessageBox.Show(
-                            $"Р”Р»СЏ Р·Р°РїСѓСЃРєР° РёРіСЂС‹ С‚СЂРµР±СѓРµС‚СЃСЏ Java 21 РёР»Рё РІС‹С€Рµ. РћР±РЅР°СЂСѓР¶РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ РЅР° РІР°С€РµРј РџРљ: {majorVersion} ({javaPath}).\n\nРџРѕР¶Р°Р»СѓР№СЃС‚Р°, СѓСЃС‚Р°РЅРѕРІРёС‚Рµ Java 21 РёР»Рё РїСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє РёРЅС‚РµСЂРЅРµС‚Сѓ, С‡С‚РѕР±С‹ Р»Р°СѓРЅС‡РµСЂ РјРѕРі СЃРєР°С‡Р°С‚СЊ РµС‘ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.",
-                            "РќРµСЃРѕРІРјРµСЃС‚РёРјР°СЏ РІРµСЂСЃРёСЏ Java",
+                            $"Для запуска игры требуется Java 21 или выше. Обнаруженная версия на вашем ПК: {majorVersion} ({javaPath}).\n\nПожалуйста, установите Java 21 или проверьте подключение к интернету, чтобы лаунчер мог скачать её автоматически.",
+                            "Несовместимая версия Java",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error
                         );
@@ -1093,10 +1093,10 @@ namespace SolutionLauncher
                     return;
                 }
 
-                Log($"РСЃРїРѕР»СЊР·СѓРµРјР°СЏ Java: {javaPath}");
+                Log($"Используемая Java: {javaPath}");
 
                 // Classpath Construction
-                Log("РџРѕСЃС‚СЂРѕРµРЅРёРµ classpath...");
+                Log("Построение classpath...");
                 var classpathJars = new List<string>();
                 classpathJars.Add(Path.Combine(gameDir, "versions", "1.21.4", "1.21.4.jar"));
 
@@ -1149,7 +1149,7 @@ namespace SolutionLauncher
                     }
                     catch (Exception ex)
                     {
-                        Log($"[РћРЁРР‘РљРђ] РћС€РёР±РєР° РїСЂРё С‡С‚РµРЅРёРё Р±РёР±Р»РёРѕС‚РµРє 1.21.4.json: {ex.Message}");
+                        Log($"[ОШИБКА] Ошибка при чтении библиотек 1.21.4.json: {ex.Message}");
                     }
                 }
 
@@ -1179,14 +1179,14 @@ namespace SolutionLauncher
                     }
                     catch (Exception ex)
                     {
-                        Log($"[РћРЁРР‘РљРђ] РћС€РёР±РєР° РїСЂРё С‡С‚РµРЅРёРё Р±РёР±Р»РёРѕС‚РµРє Fabric json: {ex.Message}");
+                        Log($"[ОШИБКА] Ошибка при чтении библиотек Fabric json: {ex.Message}");
                     }
                 }
 
                 foreach (var libPath in resolvedLibraries.Values)
                 {
                     if (File.Exists(libPath)) classpathJars.Add(libPath);
-                    else Log($"[РћРЁРР‘РљРђ] Р¤Р°Р№Р» Р±РёР±Р»РёРѕС‚РµРєРё РЅРµ РЅР°Р№РґРµРЅ: {Path.GetFileName(libPath)}");
+                    else Log($"[ОШИБКА] Файл библиотеки не найден: {Path.GetFileName(libPath)}");
                 }
 
                 var uniqueJars = classpathJars.Distinct().ToList();
@@ -1197,7 +1197,7 @@ namespace SolutionLauncher
 
                 string uuid = Guid.NewGuid().ToString("N");
                 string argsFilePath = Path.Combine(gameDir, "launch.args");
-                Log("Р—Р°РїРёСЃСЊ Р°СЂРіСѓРјРµРЅС‚РѕРІ Р·Р°РїСѓСЃРєР° РІ launch.args...");
+                Log("Запись аргументов запуска в launch.args...");
 
                 string FormatArg(string arg)
                 {
@@ -1235,7 +1235,7 @@ namespace SolutionLauncher
 
                 File.WriteAllLines(argsFilePath, formattedArgs);
 
-                Log("Р—Р°РїСѓСЃРє РїСЂРѕС†РµСЃСЃР° Minecraft...");
+                Log("Запуск процесса Minecraft...");
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = javaPath,
@@ -1250,7 +1250,7 @@ namespace SolutionLauncher
                 gameProcess = Process.Start(startInfo);
                 if (gameProcess == null)
                 {
-                    Log("[РћРЁРР‘РљРђ] РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РїСЂРѕС†РµСЃСЃ РёРіСЂС‹.");
+                    Log("[ОШИБКА] Не удалось запустить процесс игры.");
                     return;
                 }
                 bool memoryErrorDetected = false;
@@ -1266,7 +1266,7 @@ namespace SolutionLauncher
                 { 
                     if (e.Data != null) 
                     {
-                        Log($"[Minecraft РћРЁРР‘РљРђ] {e.Data}");
+                        Log($"[Minecraft ОШИБКА] {e.Data}");
                         if (e.Data.Contains("insufficient memory") || e.Data.Contains("commit_memory") || e.Data.Contains("errno=1455")) memoryErrorDetected = true;
                     }
                 };
@@ -1274,14 +1274,14 @@ namespace SolutionLauncher
                 gameProcess.BeginOutputReadLine();
                 gameProcess.BeginErrorReadLine();
 
-                Log("РРіСЂР° Р·Р°РїСѓС‰РµРЅР°! Р’С‹РІРѕРґ РєРѕРЅСЃРѕР»Рё РїРµСЂРµРЅР°РїСЂР°РІР»РµРЅ СЃСЋРґР°.");
-                SetStatus("РРіСЂР° Р·Р°РїСѓС‰РµРЅР°", 100);
+                Log("Игра запущена! Вывод консоли перенаправлен сюда.");
+                SetStatus("Игра запущена", 100);
 
                 Task.Run(() =>
                 {
                     gameProcess.WaitForExit();
-                    Log($"[Solution Launcher] РџСЂРѕС†РµСЃСЃ РёРіСЂС‹ Р·Р°РІРµСЂС€РёР»СЃСЏ СЃ РєРѕРґРѕРј {gameProcess.ExitCode}");
-                    SetStatus("Р“РѕС‚РѕРІ Рє Р·Р°РїСѓСЃРєСѓ", 0);
+                    Log($"[Solution Launcher] Процесс игры завершился с кодом {gameProcess.ExitCode}");
+                    SetStatus("Готов к запуску", 0);
                     if (memoryErrorDetected)
                     {
                         Dispatcher.Invoke(() =>
@@ -1291,12 +1291,12 @@ namespace SolutionLauncher
                             if (newRam < currentRam)
                             {
                                 RamSlider.Value = newRam;
-                                RamValueText.Text = $"{newRam} Р“Р‘";
+                                RamValueText.Text = $"{newRam} ГБ";
                                 SaveConfig();
-                                Log($"[РђР’РўРћР—РђР©РРўРђ] РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё СѓРјРµРЅСЊС€РµРЅРѕ РІС‹РґРµР»РµРЅРёРµ RAM СЃ {currentRam} Р“Р‘ РґРѕ {newRam} Р“Р‘ РёР·-Р·Р° РѕС€РёР±РєРё РїР°РјСЏС‚Рё.");
+                                Log($"[АВТОЗАЩИТА] Автоматически уменьшено выделение RAM с {currentRam} ГБ до {newRam} ГБ из-за ошибки памяти.");
                                 MessageBox.Show(
-                                    $"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РёРіСЂСѓ РёР·-Р·Р° РЅРµС…РІР°С‚РєРё РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РїР°РјСЏС‚Рё РЅР° РІР°С€РµРј РєРѕРјРїСЊСЋС‚РµСЂРµ.\n\nРњС‹ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СѓРјРµРЅСЊС€РёР»Рё РІС‹РґРµР»РµРЅРёРµ РћР—РЈ РґРѕ {newRam} Р“Р‘.\n\nРџРѕР¶Р°Р»СѓР№СЃС‚Р°, РїРѕРїСЂРѕР±СѓР№С‚Рµ РЅР°Р¶Р°С‚СЊ РєРЅРѕРїРєСѓ 'РќР°С‡Р°С‚СЊ РёРіСЂСѓ' СЃРЅРѕРІР°.",
-                                    "РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РїР°РјСЏС‚Рё",
+                                    $"Не удалось запустить игру из-за нехватки виртуальной памяти на вашем компьютере.\n\nМы автоматически уменьшили выделение ОЗУ до {newRam} ГБ.\n\nПожалуйста, попробуйте нажать кнопку 'Начать игру' снова.",
+                                    "Недостаточно виртуальной памяти",
                                     MessageBoxButton.OK,
                                     MessageBoxImage.Warning
                                 );
@@ -1308,7 +1308,7 @@ namespace SolutionLauncher
             }
             catch (Exception ex)
             {
-                Log($"[РћРЁРР‘РљРђ] Р’Рѕ РІСЂРµРјСЏ Р·Р°РїСѓСЃРєР° РїСЂРѕС†РµСЃСЃР°: {ex.Message}");
+                Log($"[ОШИБКА] Во время запуска процесса: {ex.Message}");
             }
         }
 
@@ -1347,13 +1347,13 @@ namespace SolutionLauncher
 
             try
             {
-                Log("Java 21 РЅРµ РЅР°Р№РґРµРЅР°. РќР°С‡РёРЅР°РµРј Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєСѓСЋ Р·Р°РіСЂСѓР·РєСѓ РїРѕСЂС‚Р°С‚РёРІРЅРѕР№ Java 21 JRE...");
+                Log("Java 21 не найдена. Начинаем автоматическую загрузку портативной Java 21 JRE...");
                 string jreZipPath = Path.Combine(gameDir, "jre21.zip");
                 string downloadUrl = "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse";
-                SetStatus("Р—Р°РіСЂСѓР·РєР° Java 21...", 5);
+                SetStatus("Загрузка Java 21...", 5);
                 DownloadFileWithProgress(downloadUrl, jreZipPath, 5, 45).GetAwaiter().GetResult();
-                Log("Р Р°СЃРїР°РєРѕРІРєР° Java 21...");
-                SetStatus("Р Р°СЃРїР°РєРѕРІРєР° Java 21...", 45);
+                Log("Распаковка Java 21...");
+                SetStatus("Распаковка Java 21...", 45);
                 if (Directory.Exists(portableJreDir)) Directory.Delete(portableJreDir, true);
                 Directory.CreateDirectory(portableJreDir);
                 ZipFile.ExtractToDirectory(jreZipPath, portableJreDir);
@@ -1361,11 +1361,11 @@ namespace SolutionLauncher
                 var javaws = Directory.GetFiles(portableJreDir, "javaw.exe", SearchOption.AllDirectories);
                 if (javaws.Length > 0)
                 {
-                    Log("РџРѕСЂС‚Р°С‚РёРІРЅР°СЏ Java 21 СѓСЃРїРµС€РЅРѕ СѓСЃС‚Р°РЅРѕРІР»РµРЅР°.");
+                    Log("Портативная Java 21 успешно установлена.");
                     return javaws[0];
                 }
             }
-            catch (Exception ex) { Log($"[РћРЁРР‘РљРђ] РќРµ СѓРґР°Р»РѕСЃСЊ СЃРєР°С‡Р°С‚СЊ РїРѕСЂС‚Р°С‚РёРІРЅСѓСЋ Java 21: {ex.Message}"); }
+            catch (Exception ex) { Log($"[ОШИБКА] Не удалось скачать портативную Java 21: {ex.Message}"); }
 
             return "javaw.exe";
         }
@@ -1444,7 +1444,7 @@ namespace SolutionLauncher
 
         private void RamSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (RamValueText != null) RamValueText.Text = $"{(int)RamSlider.Value} Р“Р‘";
+            if (RamValueText != null) RamValueText.Text = $"{(int)RamSlider.Value} ГБ";
         }
 
         private string GetConfigFilePath()
@@ -1468,17 +1468,17 @@ namespace SolutionLauncher
                         NicknameInput.Text = config.Nickname ?? "Player";
                         int loadedRam = config.RamGb > 0 ? config.RamGb : GetDefaultRamGb();
                         RamSlider.Value = Math.Min(loadedRam, RamSlider.Maximum);
-                        RamValueText.Text = $"{(int)RamSlider.Value} Р“Р‘";
+                        RamValueText.Text = $"{(int)RamSlider.Value} ГБ";
                         currentModVersion = config.ModVersion ?? "";
                         return;
                     }
                 }
             }
-            catch (Exception ex) { Log($"[РћРЁРР‘РљРђ] РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё: {ex.Message}"); }
+            catch (Exception ex) { Log($"[ОШИБКА] Не удалось загрузить настройки: {ex.Message}"); }
             NicknameInput.Text = "Player";
             int defaultRam = GetDefaultRamGb();
             RamSlider.Value = defaultRam;
-            RamValueText.Text = $"{defaultRam} Р“Р‘";
+            RamValueText.Text = $"{defaultRam} ГБ";
             currentModVersion = "";
         }
 
@@ -1492,7 +1492,7 @@ namespace SolutionLauncher
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(path, json);
             }
-            catch (Exception ex) { Log($"[РћРЁРР‘РљРђ] РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё: {ex.Message}"); }
+            catch (Exception ex) { Log($"[ОШИБКА] Не удалось сохранить настройки: {ex.Message}"); }
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -1550,8 +1550,8 @@ namespace SolutionLauncher
                 Dispatcher.Invoke(() =>
                 {
                     try { Clipboard.SetText(hwid); } catch {}
-                    string errorMsg = "Р’Р°СЃ РЅРµС‚Сѓ РІ Р±Р°Р·Рµ РґР°РЅРЅС‹С… С‡С‚Рѕ Р±С‹ РІР°СЃ РґРѕР±Р°РІРёР»Рё РѕС‚РїРёС€РёС‚Рµ РІ С‚РёРєРµС‚ С‡С‚Рѕ Р±С‹ РІР°СЃ РґРѕР±Р°РІРёР»Рё Рё РІ СЃС‚Р°РІСЊС‚Рµ СЃРѕРѕР±С‰РµРЅРёРµ РёР· Р±СѓС„РµСЂР° РѕР±РјРµРЅР° РєРѕС‚РѕСЂРѕРµ СЏРІР»СЏРµС‚СЃСЏ РІР°С€РёРј Hwid - РєР»СЋС‡РѕРј.\n\nР’Р°С€ HWID-РєР»СЋС‡ (СѓР¶Рµ СЃРєРѕРїРёСЂРѕРІР°РЅ РІ Р±СѓС„РµСЂ РѕР±РјРµРЅР°):\n" + hwid;
-                    MessageBox.Show(errorMsg, "Р”РѕСЃС‚СѓРї РѕРіСЂР°РЅРёС‡РµРЅ", MessageBoxButton.OK, MessageBoxImage.Error);
+                    string errorMsg = "Вас нету в базе данных что бы вас добавили отпишите в тикет что бы вас добавили и в ставьте сообщение из буфера обмена которое является вашим Hwid - ключом.\n\nВаш HWID-ключ (уже скопирован в буфер обмена):\n" + hwid;
+                    MessageBox.Show(errorMsg, "Доступ ограничен", MessageBoxButton.OK, MessageBoxImage.Error);
                     try { if (gameProcess != null && !gameProcess.HasExited) gameProcess.Kill(); } catch {}
                     Application.Current.Shutdown();
                 });
@@ -1563,7 +1563,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.7";
+                string currentVersion = "3.7.1";
                 string remoteVersionUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/launcher_version.txt";
                 string remoteExeUrl = "https://raw.githubusercontent.com/iop21322132/solution-visuals/main/SolutionLauncher.exe";
 
@@ -1572,7 +1572,7 @@ namespace SolutionLauncher
                     string latestVersion = SafeGetStringAsync(remoteVersionUrl).Trim();
                     if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
                     {
-                        Log($"РќР°Р№РґРµРЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ Р»Р°СѓРЅС‡РµСЂР°: {latestVersion} (С‚РµРєСѓС‰Р°СЏ: {currentVersion}). РЎРєР°С‡РёРІР°РЅРёРµ...");
+                        Log($"Найдено обновление лаунчера: {latestVersion} (текущая: {currentVersion}). Скачивание...");
                         string currentExePath = Process.GetCurrentProcess().MainModule?.FileName ?? "SolutionLauncher.exe";
                         string currentDir = Path.GetDirectoryName(currentExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
                         string tempExePath = Path.Combine(currentDir, "SolutionLauncher.new");
@@ -1587,14 +1587,14 @@ namespace SolutionLauncher
                         if (newExeBytes != null)
                         {
                             File.WriteAllBytes(tempExePath, newExeBytes);
-                            Log("РћР±РЅРѕРІР»РµРЅРёРµ Р»Р°СѓРЅС‡РµСЂР° СЃРєР°С‡Р°РЅРѕ. РЈСЃС‚Р°РЅРѕРІРєР° Рё РїРµСЂРµР·Р°РїСѓСЃРє...");
+                            Log("Обновление лаунчера скачано. Установка и перезапуск...");
                             string batchCommands = $"/c timeout /t 1 /nobreak && del /f /q \"{currentExePath}\" && move \"{tempExePath}\" \"{currentExePath}\" && start \"\" \"{currentExePath}\"";
                             Process.Start(new ProcessStartInfo { FileName = "cmd.exe", Arguments = batchCommands, CreateNoWindow = true, UseShellExecute = false });
                             Dispatcher.Invoke(() => Application.Current.Shutdown());
                         }
                     }
                 }
-                catch (Exception ex) { Log($"[РћРЁРР‘РљРђ] РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕРІРµСЂРёС‚СЊ РѕР±РЅРѕРІР»РµРЅРёРµ Р»Р°СѓРЅС‡РµСЂР°: {ex.Message}"); }
+                catch (Exception ex) { Log($"[ОШИБКА] Не удалось проверить обновление лаунчера: {ex.Message}"); }
             });
         }
 

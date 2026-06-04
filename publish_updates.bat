@@ -35,9 +35,7 @@ if exist "build\libs\solution-%NEW_VERSION%.jar" (
 )
 
 echo [4/6] Обновление версии в коде лаунчера...
-powershell -Command "(GC launcher\MainWindow.xaml.cs) -replace 'string currentVersion = \".*\"', 'string currentVersion = \"%NEW_VERSION%\"' | Out-File launcher\MainWindow.xaml.cs -Encoding utf8"
-powershell -Command "(GC launcher\MainWindow.xaml) -replace 'Title=\"Solution Launcher .*\"', 'Title=\"Solution Launcher %NEW_VERSION%\"' | Out-File launcher\MainWindow.xaml -Encoding utf8"
-powershell -Command "(GC launcher\MainWindow.xaml) -replace 'Text=\"Solution Launcher .*\"', 'Text=\"Solution Launcher %NEW_VERSION%\"' | Out-File launcher\MainWindow.xaml -Encoding utf8"
+:: (Версии в файлах лаунчера уже обновлены с корректной кодировкой в bump_version.ps1)
 
 echo [5/6] Сборка лаунчера в Release...
 dotnet publish launcher/SolutionLauncher.csproj -c Release -r win-x64 --self-contained true
