@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SolutionLauncher"
         mc:Ignorable="d"
-        Title="Solution Launcher 3.7.1" Height="500" Width="850"
+        Title="Solution Launcher 3.7.2" Height="500" Width="850"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" MouseLeftButtonDown="Window_MouseLeftButtonDown">
     
@@ -62,7 +62,7 @@
             <!-- Custom Title Bar -->
             <Border Grid.Row="0" Background="#18181B" CornerRadius="12,12,0,0" VerticalAlignment="Top" Height="35">
                 <Grid>
-                    <TextBlock Text="Solution Launcher 3.7.1" Foreground="#A1A1AA" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="15,0,0,0" FontWeight="SemiBold" FontSize="12" FontFamily="Segoe UI"/>
+                    <TextBlock Text="Solution Launcher 3.7.2" Foreground="#A1A1AA" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="15,0,0,0" FontWeight="SemiBold" FontSize="12" FontFamily="Segoe UI"/>
                     
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="—" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click"/>
@@ -87,7 +87,7 @@
                                 <TextBlock Text="Вход в Solution Visual" Foreground="White" FontSize="20" FontWeight="Bold" FontFamily="Segoe UI"/>
                                 <TextBlock Text="Введите никнейм для авторизации" Foreground="#71717A" FontSize="11" FontFamily="Segoe UI"/>
                             </StackPanel>
-                            <Button x:Name="OpenSettingsButton" Content="?" HorizontalAlignment="Right" VerticalAlignment="Top" 
+                            <Button x:Name="OpenSettingsButton" Content="⚙" HorizontalAlignment="Right" VerticalAlignment="Top" 
                                     Width="30" Height="30" Click="OpenSettingsButton_Click" Cursor="Hand"
                                     Background="Transparent" Foreground="#71717A" BorderThickness="0" FontSize="16">
                                 <Button.Style>
