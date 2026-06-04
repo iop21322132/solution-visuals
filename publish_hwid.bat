@@ -32,7 +32,7 @@ if %ERRORLEVEL% neq 0 (
 
 echo.
 echo Загрузка списка HWID на веб-сервер...
-curl -s -F "file=@hwid.txt" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+curl -s -H "token: SolutionSecretUpdateToken10293" -H "filename: hwid.txt" --data-binary @hwid.txt http://de3.netrix.pw:19260/upload
 echo.
 
 echo ==============================================

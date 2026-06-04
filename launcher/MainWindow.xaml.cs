@@ -1563,7 +1563,7 @@ namespace SolutionLauncher
         {
             Task.Run(() =>
             {
-                string currentVersion = "3.7.4";
+                string currentVersion = "3.7.5";
                 string remoteVersionUrl = "http://de3.netrix.pw:19260/launcher_version.txt";
                 string remoteExeUrl = "http://de3.netrix.pw:19260/SolutionLauncher.exe";
 

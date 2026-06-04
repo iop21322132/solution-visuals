@@ -63,13 +63,13 @@ if %ERRORLEVEL% neq 0 (
 
 echo.
 echo [7/7] Загрузка обновлений на веб-сервер...
-curl -s -F "file=@version.txt" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+curl -s -H "token: SolutionSecretUpdateToken10293" -H "filename: version.txt" --data-binary @version.txt http://de3.netrix.pw:19260/upload
 echo.
-curl -s -F "file=@launcher_version.txt" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+curl -s -H "token: SolutionSecretUpdateToken10293" -H "filename: launcher_version.txt" --data-binary @launcher_version.txt http://de3.netrix.pw:19260/upload
 echo.
-curl -s -F "file=@SolutionVisual.jar" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+curl -s -H "token: SolutionSecretUpdateToken10293" -H "filename: SolutionVisual.jar" --data-binary @SolutionVisual.jar http://de3.netrix.pw:19260/upload
 echo.
-curl -s -F "file=@SolutionLauncher.exe" -F "token=SolutionSecretUpdateToken10293" http://de3.netrix.pw:19260/upload.php
+curl -s -H "token: SolutionSecretUpdateToken10293" -H "filename: SolutionLauncher.exe" --data-binary @SolutionLauncher.exe http://de3.netrix.pw:19260/upload
 echo.
 
 echo ==============================================
